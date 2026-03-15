@@ -1,0 +1,38 @@
+{
+  "name": "ProctorX Exam Portal",
+  "short_name": "ProctorX",
+  "description": "AI-powered proctored examination platform",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0C0A0D",
+  "theme_color": "#F43F5E",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["education", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Go to student dashboard"
+    },
+    {
+      "name": "Coding Test",
+      "url": "/code",
+      "description": "Start coding exam"
+    }
+  ]
+}

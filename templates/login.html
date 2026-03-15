@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI ProctorX — Sign In</title>
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#F43F5E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ProctorX">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg0:#0C0A0D;--bg1:#110E15;--bg2:#17141C;--bg3:#1E1B23;
+  --blue:#F43F5E;--cyan:#2DD4BF;
+  --grad:linear-gradient(135deg,#F43F5E,#2DD4BF);
+  --b-dim:rgba(244,63,94,.10);--b-mid:rgba(244,63,94,.20);--b-glow:rgba(244,63,94,.28);
+  --red:#F87171;--r-dim:rgba(248,113,113,.12);
+  --green:#22C55E;--g-dim:rgba(34,197,94,.12);
+  --t1:#EAECF0;--t2:#B0B9C8;--t3:#7A879C;--t4:#4A5568;
+  --bdr:rgba(255,255,255,.07);--bdr2:rgba(255,255,255,.13);
+  --glass:rgba(255,255,255,.03);--glass2:rgba(255,255,255,.055);
+  --f:'Plus Jakarta Sans',sans-serif;--fm:'JetBrains Mono',monospace;
+}
+html,body{height:100%;background:var(--bg0);color:var(--t1);font-family:var(--f);-webkit-font-smoothing:antialiased;}
+
+/* ── Background animated mesh ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(244,63,94,.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(45,212,191,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(244,63,94,.04) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+/* ── Grid dots ── */
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;
+  background-image:radial-gradient(circle,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:32px 32px;
+  pointer-events:none;
+}
+
+.page{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+
+/* ── Card ── */
+.card{width:100%;max-width:420px;background:var(--bg1);border:1px solid var(--bdr2);border-radius:20px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 0 1px rgba(244,63,94,.06);}
+
+/* ── Card top stripe ── */
+.card-stripe{height:3px;background:var(--grad);}
+
+.card-body{padding:40px 36px 36px;}
+
+/* ── Logo ── */
+.logo-wrap{display:flex;align-items:center;gap:13px;margin-bottom:32px;}
+.logo-icon{width:44px;height:44px;border-radius:12px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 6px 20px var(--b-glow);flex-shrink:0;}
+.logo-text .brand{font-size:20px;font-weight:800;color:var(--t1);}
+.logo-text .tagline{font-size:10px;color:var(--t4);font-family:var(--fm);letter-spacing:1.5px;margin-top:1px;}
+
+/* ── Tab toggle ── */
+.tabs{display:flex;background:var(--bg2);border-radius:10px;padding:4px;gap:4px;margin-bottom:28px;border:1px solid var(--bdr);}
+.tab{flex:1;padding:8px;border-radius:7px;font-size:13px;font-weight:600;text-align:center;cursor:pointer;color:var(--t4);transition:all .2s;border:1px solid transparent;font-family:var(--f);}
+.tab.active{background:var(--b-dim);color:var(--blue);border-color:var(--b-mid);}
+
+/* ── Form title ── */
+.form-title{font-size:22px;font-weight:800;color:var(--t1);margin-bottom:4px;}
+.form-sub{font-size:13px;color:var(--t3);margin-bottom:24px;}
+
+/* ── Alerts ── */
+.alert{display:flex;align-items:center;gap:9px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:500;margin-bottom:18px;}
+.alert-error{background:var(--r-dim);border:1px solid rgba(248,113,113,.25);color:var(--red);}
+.alert-success{background:var(--g-dim);border:1px solid rgba(34,197,94,.25);color:var(--green);}
+.alert-icon{font-size:15px;flex-shrink:0;}
+
+/* ── Inputs ── */
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.6px;font-family:var(--fm);margin-bottom:7px;}
+.input-wrap{position:relative;}
+.input-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;z-index:1;}
+.field input{
+  width:100%;background:var(--bg2);border:1px solid var(--bdr2);border-radius:10px;
+  color:var(--t1);font-size:14px;font-family:var(--f);
+  padding:12px 14px 12px 42px;outline:none;transition:border-color .2s,box-shadow .2s;
+}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--b-dim);}
+.field input::placeholder{color:var(--t4);}
+
+/* ── Role select ── */
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.role-card{padding:11px 14px;border-radius:10px;border:1px solid var(--bdr2);background:var(--bg2);cursor:pointer;transition:all .2s;text-align:center;}
+.role-card:hover{border-color:var(--bdr2);background:var(--glass2);}
+.role-card.selected{border-color:var(--blue);background:var(--b-dim);}
+.role-card .rc-icon{font-size:20px;margin-bottom:4px;}
+.role-card .rc-name{font-size:12px;font-weight:700;color:var(--t2);}
+.role-card .rc-desc{font-size:10px;color:var(--t4);margin-top:1px;}
+.role-card.selected .rc-name{color:var(--blue);}
+input[name="role"]{display:none;}
+
+/* ── Submit ── */
+.btn-submit{
+  width:100%;padding:13px;border-radius:10px;
+  background:var(--grad);color:#fff;font-size:14px;font-weight:700;
+  border:none;cursor:pointer;font-family:var(--f);
+  transition:opacity .2s,transform .15s,box-shadow .2s;
+  box-shadow:0 4px 20px var(--b-glow);margin-top:8px;
+  position:relative;overflow:hidden;
+}
+.btn-submit:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 6px 28px var(--b-glow);}
+.btn-submit:active{transform:translateY(0);}
+.btn-submit::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.12),transparent);
+  pointer-events:none;
+}
+
+/* ── Divider ── */
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--bdr);}
+.divider span{font-size:11px;color:var(--t4);font-family:var(--fm);}
+
+/* ── Demo credentials ── */
+.demo-box{background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:14px 16px;}
+.demo-title{font-size:10px;font-weight:700;color:var(--t4);letter-spacing:1px;font-family:var(--fm);margin-bottom:10px;}
+.demo-creds{display:flex;gap:10px;}
+.cred-btn{flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--bdr2);background:var(--glass2);cursor:pointer;transition:all .2s;text-align:center;font-family:var(--f);}
+.cred-btn:hover{border-color:var(--blue);background:var(--b-dim);}
+.cred-btn .cb-role{font-size:10px;font-weight:700;color:var(--blue);font-family:var(--fm);letter-spacing:.5px;}
+.cred-btn .cb-info{font-size:11px;color:var(--t3);margin-top:2px;}
+
+/* ── Bottom note ── */
+.bottom-note{text-align:center;font-size:12px;color:var(--t4);margin-top:22px;}
+.bottom-note span{color:var(--blue);cursor:pointer;font-weight:600;}
+.bottom-note span:hover{text-decoration:underline;}
+
+/* ── Register only fields ── */
+#reg-only{display:none;}
+
+/* ── Floating particles (pure CSS) ── */
+.particles{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.p{position:absolute;border-radius:50%;opacity:.35;animation:float linear infinite;}
+@keyframes float{0%{transform:translateY(110vh) scale(0);}100%{transform:translateY(-10vh) scale(1);}}
+.p:nth-child(1){width:3px;height:3px;background:var(--blue);left:10%;animation-duration:12s;animation-delay:0s;}
+.p:nth-child(2){width:2px;height:2px;background:var(--cyan);left:25%;animation-duration:18s;animation-delay:3s;}
+.p:nth-child(3){width:4px;height:4px;background:var(--blue);left:40%;animation-duration:15s;animation-delay:6s;}
+.p:nth-child(4){width:2px;height:2px;background:var(--cyan);left:60%;animation-duration:20s;animation-delay:1s;}
+.p:nth-child(5){width:3px;height:3px;background:var(--blue);left:75%;animation-duration:14s;animation-delay:8s;}
+.p:nth-child(6){width:2px;height:2px;background:var(--cyan);left:90%;animation-duration:16s;animation-delay:4s;}
+</style>
+</head>
+<body>
+
+<!-- Vortex full-screen background -->
+<div id="vortex-bg" style="position:fixed;inset:0;z-index:0;pointer-events:none;"></div>
+
+<div class="page" style="position:relative;z-index:1;">
+  <div class="card">
+    <div class="card-stripe"></div>
+    <div class="card-body">
+
+      <!-- Logo -->
+      <div class="logo-wrap">
+        <div class="logo-icon">🎓</div>
+        <div class="logo-text">
+          <div class="brand">AI ProctorX</div>
+          <div class="tagline">// INTELLIGENT EXAM MONITORING</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="tab" id="tab-reg" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <!-- ── LOGIN FORM ── -->
+      <div id="form-login">
+        <div class="form-title">Welcome back</div>
+        <div class="form-sub">Sign in to your ProctorX account</div>
+
+        {% if error %}
+        <div class="alert alert-error"><span class="alert-icon">⚠️</span>{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/login" id="loginForm">
+          <div class="field">
+            <label>USERNAME</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input name="username" placeholder="Enter your username" autocomplete="username" required>
+            </div>
+          </div>
+          <div class="field">
+            <label>PASSWORD</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required>
+            </div>
+          </div>
+          <button type="submit" class="btn-submit">Sign In →</button>
+        </form>
+
+        <div class="divider"><span>QUICK ACCESS</span></div>
+
+        <div class="demo-box">
+          <div class="demo-title">DEMO CREDENTIALS</div>
+          <div class="demo-creds">
+            <div class="cred-btn" onclick="fillCreds('admin','admin123')">
+              <div class="cb-role">ADMIN</div>
+              <div class="cb-info">admin / admin123</div>
+            </div>
+            <div class="cred-btn" onclick="fillCreds('student1','student123')">
+              <div class="cb-role">STUDENT</div>
+              <div class="cb-info">student1 / student123</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-note">Don't have an account? <span onclick="switchTab('register')">Create one</span></div>
+      </div>
+
+      <!-- ── REGISTER FORM ── -->
+      <div id="form-register" style="display:none">
+        <div class="form-title">Create account</div>
+        <div class="form-sub">Join ProctorX as a student or admin</div>
+
+        {% if reg_error %}
+        <div class="alert alert-error"><span class="alert-icon">⚠️</span>{{ reg_error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/register">
+          <div class="field">
+            <label>USERNAME</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input name="username" placeholder="Choose a username" required>
+            </div>
+          </div>
+          <div class="field">
+            <label>EMAIL</label>
+            <div class="input-wrap">
+              <span class="input-icon">📧</span>
+              <input name="email" type="email" placeholder="you@example.com" required>
+            </div>
+          </div>
+          <div class="field">
+            <label>PASSWORD</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input name="password" type="password" placeholder="Choose a strong password" required>
+            </div>
+          </div>
+          <div class="field">
+            <label>ROLE</label>
+            <div class="role-grid">
+              <div class="role-card selected" id="rc-student" onclick="selectRole('student')">
+                <div class="rc-icon">🎓</div>
+                <div class="rc-name">Student</div>
+                <div class="rc-desc">Take proctored exams</div>
+              </div>
+              <div class="role-card" id="rc-admin" onclick="selectRole('admin')">
+                <div class="rc-icon">🛡️</div>
+                <div class="rc-name">Admin</div>
+                <div class="rc-desc">Monitor & manage</div>
+              </div>
+            </div>
+            <input type="hidden" name="role" id="roleInput" value="student">
+          </div>
+          <button type="submit" class="btn-submit">Create Account →</button>
+        </form>
+
+        <div class="bottom-note">Already have an account? <span onclick="switchTab('login')">Sign in</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.getElementById('form-login').style.display    = tab === 'login'    ? 'block' : 'none';
+  document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('tab-login').className  = 'tab' + (tab === 'login'    ? ' active' : '');
+  document.getElementById('tab-reg').className    = 'tab' + (tab === 'register' ? ' active' : '');
+}
+
+function fillCreds(user, pass) {
+  const form = document.getElementById('loginForm');
+  form.querySelector('[name="username"]').value = user;
+  form.querySelector('[name="password"]').value = pass;
+  form.querySelector('[name="username"]').focus();
+}
+
+function selectRole(role) {
+  document.getElementById('roleInput').value = role;
+  document.getElementById('rc-student').classList.toggle('selected', role === 'student');
+  document.getElementById('rc-admin').classList.toggle('selected',   role === 'admin');
+}
+
+// Auto-open register tab if reg error or show_reg flag
+{% if show_reg %}switchTab('register');{% endif %}
+</script>
+
+<!-- Vortex animation -->
+<script src="https://cdn.jsdelivr.net/npm/simplex-noise@2.4.0/simplex-noise.min.js"></script>
+<script src="/static/js/vortex.js"></script>
+<script>
+  window.addEventListener('load', function () {
+    mountVortex('vortex-bg', {
+      particleCount: 500,
+      baseHue: 345,
+      rangeY: 400,
+      baseSpeed: 0.2,
+      rangeSpeed: 1.2,
+      backgroundColor: 'rgba(0,0,0,0)'
+    });
+  });
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

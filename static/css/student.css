@@ -1,0 +1,100 @@
+/* STUDENT.CSS */
+
+.student-hero {
+  background:linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  border-radius:var(--r-2xl); padding:28px 32px; margin-bottom:24px;
+  display:flex; align-items:center; justify-content:space-between;
+  box-shadow:0 4px 20px var(--accent-glow);
+  position:relative; overflow:hidden;
+}
+.student-hero-blob {
+  position:absolute; border-radius:50%; pointer-events:none;
+  width:200px; height:200px; right:-40px; top:-60px;
+  background:rgba(255,255,255,0.08);
+}
+.student-hero h2 { font-size:24px; font-weight:800; color:#fff; margin-bottom:5px; }
+.student-hero p  { font-size:13px; color:rgba(255,255,255,0.75); }
+.hero-stats      { display:flex; gap:28px; }
+.hero-stat-val   { font-family:var(--font-mono); font-size:28px; font-weight:700; color:#fff; display:block; }
+.hero-stat-label { font-size:11px; color:rgba(255,255,255,0.65); }
+
+/* Subject cards */
+.exams-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; margin-bottom:24px;
+}
+
+/* Subject colors */
+.subject-dsa   { --sc:#2563EB; --scb:rgba(37,99,235,0.1); }
+.subject-dbms  { --sc:#10b981; --scb:rgba(16,185,129,0.1); }
+.subject-java  { --sc:#f59e0b; --scb:rgba(245,158,11,0.1); }
+.subject-daa   { --sc:#ef4444; --scb:rgba(239,68,68,0.1); }
+.subject-python{ --sc:#3b82f6; --scb:rgba(59,130,246,0.1); }
+.subject-default{ --sc:#14B8A6; --scb:rgba(20,184,166,0.1); }
+
+.exam-card {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:var(--r-xl); padding:20px; cursor:pointer;
+  transition:all 0.25s; box-shadow:0 1px 4px var(--shadow);
+  position:relative; overflow:hidden;
+}
+.exam-card::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:3px;
+  background:var(--sc, var(--accent)); transform:scaleX(0); transform-origin:left; transition:transform 0.3s;
+}
+.exam-card:hover { border-color:var(--sc, var(--accent)); transform:translateY(-2px); box-shadow:0 8px 24px var(--shadow-md); }
+.exam-card:hover::after { transform:scaleX(1); }
+
+.exam-card-icon {
+  width:46px; height:46px; border-radius:14px; margin-bottom:14px;
+  background:var(--scb, var(--accent-soft));
+  display:flex; align-items:center; justify-content:center; font-size:22px;
+}
+.exam-card-name { font-size:15px; font-weight:700; color:var(--text); margin-bottom:5px; }
+.exam-card-desc { font-size:12px; color:var(--text-3); line-height:1.5; margin-bottom:14px; }
+.exam-card-meta {
+  display:flex; align-items:center; gap:10px;
+  font-size:11px; color:var(--text-3); margin-bottom:14px;
+}
+.exam-card-meta span { display:flex; align-items:center; gap:4px; }
+.exam-card-footer {
+  display:flex; align-items:center; justify-content:space-between;
+  padding-top:14px; border-top:1px solid var(--border);
+}
+.exam-start-btn {
+  display:flex; align-items:center; gap:6px;
+  padding:8px 16px; border:none; border-radius:var(--r-sm);
+  background:var(--sc, var(--accent)); color:#fff;
+  font-size:12px; font-weight:700; cursor:pointer;
+  transition:all 0.2s; font-family:var(--font-sans);
+}
+.exam-start-btn:hover { opacity:0.85; transform:translateY(-1px); }
+
+/* History */
+.history-wrap {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:var(--r-xl); overflow:hidden; box-shadow:0 1px 4px var(--shadow);
+}
+.history-header {
+  padding:14px 20px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--bg3);
+}
+.history-title { font-size:14px; font-weight:700; color:var(--text); }
+.history-empty {
+  padding:48px; text-align:center;
+  color:var(--text-3); font-size:13px;
+}
+.history-empty-icon { font-size:36px; display:block; margin-bottom:10px; }
+
+.score-cell { font-family:var(--font-mono); font-weight:700; }
+.score-high { color:var(--green); }
+.score-mid  { color:var(--amber); }
+.score-low  { color:var(--red); }
+
+.report-link {
+  display:inline-flex; align-items:center; gap:5px;
+  color:var(--accent); font-size:12px; font-weight:600;
+  padding:5px 10px; border-radius:var(--r-sm);
+  background:var(--accent-soft); transition:all 0.2s;
+}
+.report-link:hover { background:var(--accent-mid); }

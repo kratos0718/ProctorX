@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>{{ session.exam_name }} — ProctorX Code Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg0:#0C0A0D;--bg1:#110E15;--bg2:#17141C;--bg3:#1E1B23;--bg4:#25222A;
+  --rose:#F43F5E;--mint:#2DD4BF;--gold:#EAB308;
+  --green:#22C55E;--amber:#F59E0B;--red:#F87171;
+  --grad:linear-gradient(135deg,#F43F5E,#EAB308);
+  --b-dim:rgba(244,63,94,.10);--b-mid:rgba(244,63,94,.20);--b-glow:rgba(244,63,94,.28);
+  --g-dim:rgba(34,197,94,.12);--a-dim:rgba(245,158,11,.12);--r-dim:rgba(248,113,113,.12);
+  --mint-dim:rgba(45,212,191,.10);
+  --bdr:rgba(255,255,255,.07);--bdr2:rgba(255,255,255,.13);
+  --glass:rgba(255,255,255,.03);--glass2:rgba(255,255,255,.055);
+  --t1:#EAECF0;--t2:#B0B9C8;--t3:#7A879C;--t4:#4A5568;
+  --f:'Plus Jakarta Sans',sans-serif;--fm:'JetBrains Mono',monospace;
+  --r1:6px;--r2:10px;--r3:14px;--r4:18px;
+}
+html,body{height:100%;background:var(--bg0);color:var(--t1);font-family:var(--f);overflow:hidden;-webkit-font-smoothing:antialiased;}
+button{font-family:var(--f);cursor:pointer;border:none;background:none;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(244,63,94,.3);border-radius:4px;}
+
+#scanlines{position:fixed;inset:0;pointer-events:none;z-index:9000;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.02) 2px,rgba(0,0,0,.02) 4px);}
+
+#tab-warning{
+  position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-100%);
+  background:rgba(248,113,113,.14);border:1px solid rgba(248,113,113,.5);
+  border-radius:0 0 12px 12px;padding:10px 28px;font-size:13px;font-weight:700;
+  color:var(--red);z-index:9999;transition:transform .4s cubic-bezier(.34,1.56,.64,1);
+  display:flex;align-items:center;gap:8px;box-shadow:0 4px 28px rgba(248,113,113,.25);}
+#tab-warning.show{transform:translateX(-50%) translateY(0);}
+
+/* ─ SHELL ─ */
+#shell{display:grid;grid-template-rows:54px 1fr 52px;grid-template-columns:170px 1fr 272px;height:100vh;overflow:hidden;position:relative;z-index:1;}
+
+/* ─ TOPBAR ─ */
+#topbar{grid-column:1/-1;display:flex;align-items:center;padding:0 18px;gap:12px;
+  background:rgba(12,10,13,.94);backdrop-filter:blur(24px);border-bottom:1px solid var(--bdr2);}
+.tb-logo{width:28px;height:28px;border-radius:7px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 10px var(--b-glow);}
+.tb-name{font-size:13px;font-weight:800;color:var(--t1);}
+.tb-sep{width:1px;height:24px;background:var(--bdr2);}
+.tb-exam{font-size:12px;font-weight:600;color:var(--t2);flex:1;}
+.tb-sub{font-size:9px;color:var(--t4);font-family:var(--fm);}
+.tb-r{display:flex;align-items:center;gap:8px;margin-left:auto;}
+.tb-pill{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--bdr2);border-radius:var(--r2);padding:5px 11px;}
+.tb-pill-lbl{font-size:9px;font-weight:700;color:var(--t4);font-family:var(--fm);letter-spacing:.8px;}
+#timer{font-family:var(--fm);font-size:15px;font-weight:700;color:var(--t1);letter-spacing:2px;min-width:50px;text-align:center;transition:color .3s;}
+#timer.warning{color:var(--amber);}
+#timer.critical{color:var(--red);animation:tBlink .7s infinite;}
+@keyframes tBlink{0%,100%{opacity:1}50%{opacity:.4}}
+#score-pill{font-family:var(--fm);font-size:13px;font-weight:700;color:var(--green);}
+#submit-btn{padding:7px 16px;border-radius:var(--r2);background:var(--grad);color:#fff;font-size:12px;font-weight:700;box-shadow:0 3px 10px var(--b-glow);transition:opacity .2s,transform .15s;}
+#submit-btn:hover{opacity:.88;transform:translateY(-1px);}
+#submit-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+/* ─ NAVIGATOR ─ */
+#nav-panel{grid-column:1;grid-row:2;background:var(--bg1);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden;}
+.nav-hdr{padding:10px 12px 8px;border-bottom:1px solid var(--bdr);}
+.nav-hdr-lbl{font-size:9px;font-weight:700;color:var(--t4);letter-spacing:1.2px;font-family:var(--fm);}
+.nav-list{padding:8px;overflow-y:auto;flex:1;}
+.nav-qbtn{
+  display:flex;align-items:center;gap:8px;width:100%;
+  padding:7px 10px;border-radius:var(--r2);
+  background:transparent;border:1px solid transparent;
+  cursor:pointer;transition:all .18s;margin-bottom:3px;}
+.nav-qbtn:hover{background:var(--glass2);border-color:var(--bdr);}
+.nav-qbtn.active{background:var(--b-dim);border-color:var(--b-mid);}
+.nav-qbtn.solved{border-color:rgba(34,197,94,.3);}
+.nq-num{font-size:9px;font-weight:700;font-family:var(--fm);color:var(--t4);min-width:18px;}
+.nav-qbtn.active .nq-num{color:var(--rose);}
+.nq-title{font-size:11px;color:var(--t2);flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nav-qbtn.active .nq-title{color:var(--t1);font-weight:600;}
+.nq-dot{width:6px;height:6px;border-radius:50%;background:var(--bdr2);flex-shrink:0;}
+.nav-qbtn.solved .nq-dot{background:var(--green);}
+.nav-qbtn.failed .nq-dot{background:var(--red);}
+.diff-badge{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;font-family:var(--fm);flex-shrink:0;}
+.diff-Easy{background:var(--g-dim);color:var(--green);}
+.diff-Medium{background:var(--a-dim);color:var(--amber);}
+.diff-Hard{background:var(--r-dim);color:var(--red);}
+.nav-legend{padding:8px 12px;border-top:1px solid var(--bdr);}
+.nl-row{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t4);margin-bottom:3px;}
+.nl-dot{width:6px;height:6px;border-radius:50%;}
+
+/* ─ MAIN CODING AREA ─ */
+#coding-area{grid-column:2;grid-row:2;display:flex;flex-direction:column;overflow:hidden;background:var(--bg0);}
+
+/* Top: language + actions bar */
+#code-topbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg1);border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.lang-select{background:var(--bg3);border:1px solid var(--bdr2);border-radius:var(--r1);color:var(--t2);font-family:var(--fm);font-size:11px;padding:4px 8px;cursor:pointer;}
+.lang-select option{background:var(--bg2);}
+.code-actions{display:flex;gap:6px;margin-left:auto;}
+.btn-run{display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:var(--r2);background:var(--mint-dim);border:1px solid rgba(45,212,191,.3);color:var(--mint);font-size:12px;font-weight:700;transition:all .2s;cursor:pointer;}
+.btn-run:hover{background:rgba(45,212,191,.2);transform:translateY(-1px);}
+.btn-run:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.btn-test{display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:var(--r2);background:var(--b-dim);border:1px solid var(--b-mid);color:var(--rose);font-size:12px;font-weight:700;transition:all .2s;cursor:pointer;}
+.btn-test:hover{background:rgba(244,63,94,.18);}
+.btn-test:disabled{opacity:.4;cursor:not-allowed;}
+.run-shortcut{font-size:9px;color:var(--t4);font-family:var(--fm);}
+
+/* Horizontal split: problem | editor+output */
+#content-split{flex:1;display:grid;grid-template-columns:380px 1fr;overflow:hidden;}
+
+/* Problem panel */
+#problem-panel{background:var(--bg1);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden;}
+.prob-hdr{padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.prob-num{font-size:9px;font-weight:700;color:var(--t4);font-family:var(--fm);letter-spacing:1px;margin-bottom:3px;}
+.prob-title{font-size:15px;font-weight:800;color:var(--t1);}
+.prob-meta{display:flex;align-items:center;gap:7px;margin-top:5px;}
+.prob-pts{font-size:10px;color:var(--gold);font-family:var(--fm);font-weight:700;}
+.prob-body{flex:1;overflow-y:auto;padding:16px;}
+.prob-desc{font-size:13px;color:var(--t2);line-height:1.75;margin-bottom:16px;}
+.prob-section{font-size:10px;font-weight:700;color:var(--t4);letter-spacing:1px;font-family:var(--fm);margin-bottom:8px;}
+.example-box{background:var(--bg2);border:1px solid var(--bdr);border-radius:var(--r2);padding:10px 12px;margin-bottom:8px;font-family:var(--fm);font-size:12px;}
+.ex-row{display:flex;gap:8px;margin-bottom:3px;}
+.ex-key{color:var(--t4);min-width:55px;}
+.ex-val{color:var(--t1);}
+.prob-hint{margin-top:14px;padding:10px 12px;background:var(--a-dim);border:1px solid rgba(245,158,11,.2);border-radius:var(--r2);font-size:11px;color:var(--amber);line-height:1.5;}
+
+/* Editor area */
+#editor-area{display:flex;flex-direction:column;overflow:hidden;}
+#editor-mount{flex:1;overflow:hidden;min-height:0;}
+/* Output panel */
+#output-panel{height:160px;flex-shrink:0;background:var(--bg1);border-top:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden;}
+.out-hdr{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.out-lbl{font-size:9px;font-weight:700;color:var(--t4);letter-spacing:1px;font-family:var(--fm);flex:1;}
+.out-status{font-size:10px;font-weight:700;font-family:var(--fm);padding:2px 8px;border-radius:3px;}
+.out-status.pass{background:var(--g-dim);color:var(--green);}
+.out-status.fail{background:var(--r-dim);color:var(--red);}
+.out-status.running{background:var(--a-dim);color:var(--amber);}
+#output-body{flex:1;overflow-y:auto;padding:8px 12px;font-family:var(--fm);font-size:12px;color:var(--t2);white-space:pre-wrap;}
+.out-pass{color:var(--green);}
+.out-fail{color:var(--red);}
+.out-err{color:var(--amber);}
+.out-info{color:var(--t3);}
+
+/* ─ PROCTOR PANEL ─ */
+#proctor-panel{grid-column:3;grid-row:2/4;background:var(--bg1);border-left:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden;}
+.pp-hdr{padding:9px 13px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);flex-shrink:0;}
+.pp-title{font-size:9px;font-weight:700;color:var(--t4);letter-spacing:1.3px;font-family:var(--fm);}
+.live-pill{display:flex;align-items:center;gap:4px;background:var(--r-dim);border:1px solid rgba(248,113,113,.2);padding:3px 8px;border-radius:99px;}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink 1.2s infinite;}
+.live-txt{font-size:9px;font-weight:800;color:var(--red);letter-spacing:1px;font-family:var(--fm);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+#cam-box{position:relative;background:#000;flex-shrink:0;border-bottom:1px solid var(--bdr);overflow:hidden;}
+#webcam{width:100%;height:186px;object-fit:cover;display:block;}
+.cam-hud{position:absolute;inset:0;pointer-events:none;background:linear-gradient(transparent 55%,rgba(12,10,13,.85));}
+.cam-hud::before{content:'';position:absolute;top:7px;left:7px;width:16px;height:16px;border-top:2px solid var(--rose);border-left:2px solid var(--rose);border-radius:3px 0 0 0;}
+.cam-hud::after{content:'';position:absolute;top:7px;right:7px;width:16px;height:16px;border-top:2px solid var(--rose);border-right:2px solid var(--rose);border-radius:0 3px 0 0;}
+#cam-br::before{content:'';position:absolute;bottom:26px;left:7px;width:16px;height:16px;border-bottom:2px solid var(--rose);border-left:2px solid var(--rose);border-radius:0 0 0 3px;}
+#cam-br::after{content:'';position:absolute;bottom:26px;right:7px;width:16px;height:16px;border-bottom:2px solid var(--rose);border-right:2px solid var(--rose);border-radius:0 0 3px 0;}
+#cam-status-bar{position:absolute;bottom:0;left:0;right:0;padding:4px 9px;font-size:9px;font-weight:700;color:var(--t4);font-family:var(--fm);letter-spacing:.8px;background:rgba(12,10,13,.7);transition:color .3s;}
+#cam-status-bar.active{color:var(--green);}
+#cam-status-bar.err{color:var(--red);}
+#cam-error{position:absolute;inset:0;background:rgba(12,10,13,.95);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px;z-index:5;display:none;}
+#cam-error.show{display:flex;}
+.cem-icon{font-size:22px;margin-bottom:6px;}
+.cem-title{font-size:11px;font-weight:700;color:var(--t1);margin-bottom:4px;}
+.cem-msg{font-size:10px;color:var(--t3);line-height:1.5;margin-bottom:8px;}
+.cem-btn{padding:5px 12px;border-radius:var(--r1);background:var(--b-dim);border:1px solid var(--b-mid);color:var(--rose);font-size:10px;font-weight:700;cursor:pointer;}
+#trk-section{padding:10px 12px;border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.trk-hdr-lbl{font-size:9px;font-weight:700;color:var(--t4);letter-spacing:1.2px;font-family:var(--fm);margin-bottom:8px;}
+.trk-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.trk-lft{display:flex;align-items:center;gap:7px;}
+.trk-dot{width:6px;height:6px;border-radius:50%;background:var(--t4);transition:all .4s;}
+.trk-dot.ok{background:var(--green);box-shadow:0 0 5px rgba(34,197,94,.5);}
+.trk-dot.warn{background:var(--amber);box-shadow:0 0 5px rgba(245,158,11,.4);}
+.trk-dot.err{background:var(--red);box-shadow:0 0 5px rgba(248,113,113,.4);}
+.trk-name{font-size:10px;color:var(--t3);}
+.trk-val{font-size:9px;color:var(--t4);font-family:var(--fm);}
+#risk-section{padding:10px 12px;border-bottom:1px solid var(--bdr);flex-shrink:0;}
+.risk-lbl{font-size:9px;font-weight:700;color:var(--t4);letter-spacing:1.2px;font-family:var(--fm);}
+#risk-badge{font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;font-family:var(--fm);}
+#risk-badge.low{background:var(--g-dim);color:var(--green);}
+#risk-badge.med{background:var(--a-dim);color:var(--amber);}
+#risk-badge.high{background:rgba(249,115,22,.12);color:#f97316;}
+#risk-badge.crit{background:var(--r-dim);color:var(--red);}
+.risk-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.risk-num-row{display:flex;align-items:baseline;gap:3px;margin-bottom:8px;}
+#risk-num{font-family:var(--fm);font-size:30px;font-weight:800;color:var(--green);transition:color .4s;line-height:1;}
+.risk-denom{font-size:11px;color:var(--t4);}
+.risk-track{height:4px;background:var(--bdr2);border-radius:4px;overflow:hidden;}
+#risk-fill{height:100%;width:0%;background:var(--green);transition:width .5s,background .4s;border-radius:4px;}
+#viol-hdr{padding:7px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);flex-shrink:0;}
+.viol-hdr-lbl{font-size:9px;font-weight:700;color:var(--t4);letter-spacing:1.2px;font-family:var(--fm);}
+#viol-count{font-size:11px;font-weight:800;color:var(--red);font-family:var(--fm);}
+#viols-feed{flex:1;overflow-y:auto;padding:6px;}
+.vf-empty{text-align:center;padding:18px 10px;color:var(--t4);}
+.viol-item{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;border-radius:var(--r2);margin-bottom:4px;background:var(--bg2);border:1px solid var(--bdr);animation:vSlide .25s ease both;}
+@keyframes vSlide{from{opacity:0;transform:translateX(8px);}to{opacity:1;transform:none;}}
+.viol-item.high{background:rgba(248,113,113,.05);border-color:rgba(248,113,113,.18);}
+.viol-item.medium{background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.18);}
+.vi-icon{font-size:11px;flex-shrink:0;margin-top:1px;}
+.vi-msg{font-size:10px;color:var(--t2);line-height:1.4;}
+.vi-time{font-size:9px;color:var(--t4);font-family:var(--fm);margin-top:1px;}
+
+/* ─ FOOTER ─ */
+#footer{grid-column:1/3;grid-row:3;display:flex;align-items:center;padding:0 18px;gap:14px;background:var(--bg1);border-top:1px solid var(--bdr);}
+.score-bar{display:flex;gap:2px;align-items:center;}
+.sq{width:20px;height:8px;border-radius:2px;background:var(--bdr2);transition:background .3s;}
+.sq.pass{background:var(--green);}
+.sq.fail{background:var(--red);}
+.sq.untried{background:var(--bdr2);}
+.ftr-score{font-size:11px;font-weight:700;font-family:var(--fm);color:var(--t2);}
+.ftr-hint{font-size:10px;color:var(--t4);margin-left:auto;}
+kbd{background:var(--bg3);border:1px solid var(--bdr2);border-radius:3px;padding:1px 5px;font-size:9px;font-family:var(--fm);color:var(--t3);}
+
+/* Overlays */
+#terminated-overlay{position:fixed;inset:0;background:rgba(12,10,13,.97);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:9998;text-align:center;}
+#terminated-overlay.show{display:flex;}
+.to-icon{font-size:50px;margin-bottom:12px;}
+.to-title{font-size:22px;font-weight:800;color:var(--red);}
+.to-msg{font-size:13px;color:var(--t3);margin:8px 0 20px;}
+.to-link{color:var(--rose);font-size:13px;font-weight:600;}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--bg3);border:1px solid var(--bdr2);border-radius:9px;padding:8px 18px;font-size:12px;font-weight:600;color:var(--t1);opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.5);}
+#toast.show{opacity:1;}
+</style>
+</head>
+<body oncontextmenu="return false">
+<div id="scanlines"></div>
+<div id="tab-warning">⚠️ TAB SWITCH DETECTED — Violation recorded</div>
+
+<div id="shell">
+
+  <!-- TOPBAR -->
+  <header id="topbar">
+    <div class="tb-logo">⌨️</div>
+    <span class="tb-name">ProctorX</span>
+    <div class="tb-sep"></div>
+    <div style="flex:1">
+      <div class="tb-exam">{{ session.exam_name }}</div>
+      <div class="tb-sub">{{ current_user.username }} · Session #{{ session.id }}</div>
+    </div>
+    <div class="tb-r">
+      <div class="tb-pill">
+        <span class="tb-pill-lbl">SCORE</span>
+        <span id="score-pill">0 / {{ questions|length }}</span>
+      </div>
+      <div class="tb-pill">
+        <span class="tb-pill-lbl">TIME LEFT</span>
+        <span id="timer">60:00</span>
+      </div>
+      <button id="submit-btn" onclick="submitExam()">Submit Exam →</button>
+    </div>
+  </header>
+
+  <!-- NAVIGATOR -->
+  <nav id="nav-panel">
+    <div class="nav-hdr"><div class="nav-hdr-lbl">QUESTIONS</div></div>
+    <div class="nav-list" id="nav-list">
+      {% for q in questions %}
+      <button class="nav-qbtn {% if loop.first %}active{% endif %}" id="navq-{{ q.id }}"
+              onclick="loadQuestion({{ q.id }})">
+        <span class="nq-num">#{{ loop.index }}</span>
+        <span class="nq-title">{{ q.title }}</span>
+        <span class="diff-badge diff-{{ q.difficulty }}">{{ q.difficulty }}</span>
+        <span class="nq-dot" id="dot-{{ q.id }}"></span>
+      </button>
+      {% endfor %}
+    </div>
+    <div class="nav-legend">
+      <div class="nl-row"><div class="nl-dot" style="background:var(--bdr2)"></div> Untested</div>
+      <div class="nl-row"><div class="nl-dot" style="background:var(--green)"></div> Passed</div>
+      <div class="nl-row"><div class="nl-dot" style="background:var(--red)"></div> Failed</div>
+    </div>
+  </nav>
+
+  <!-- CODING AREA -->
+  <div id="coding-area">
+    <!-- Language / action bar -->
+    <div id="code-topbar">
+      <select class="lang-select" id="lang-select" onchange="changeLanguage()">
+        <option value="python">Python 3</option>
+        <option value="javascript">JavaScript (Node)</option>
+        <option value="java">Java</option>
+        <option value="cpp">C++</option>
+      </select>
+      <span class="run-shortcut"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> run</span>
+      <div class="code-actions">
+        <button class="btn-run" id="btn-run" onclick="runCode(false)">▶ Run Code</button>
+        <button class="btn-test" id="btn-test" onclick="runCode(true)">✓ Run Tests</button>
+      </div>
+    </div>
+
+    <!-- Content split: problem | editor+output -->
+    <div id="content-split">
+
+      <!-- Problem panel -->
+      <div id="problem-panel">
+        <div class="prob-hdr">
+          <div class="prob-num" id="prob-num">QUESTION 1 / {{ questions|length }}</div>
+          <div class="prob-title" id="prob-title">Loading…</div>
+          <div class="prob-meta">
+            <span class="diff-badge" id="prob-diff">Easy</span>
+            <span class="prob-pts" id="prob-pts">+10 pts</span>
+          </div>
+        </div>
+        <div class="prob-body">
+          <div class="prob-desc" id="prob-desc"></div>
+          <div class="prob-section">EXAMPLE</div>
+          <div id="prob-examples"></div>
+          <div class="prob-hint" id="prob-hint" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Editor + Output -->
+      <div id="editor-area">
+        <div id="editor-mount"></div>
+        <div id="output-panel">
+          <div class="out-hdr">
+            <span class="out-lbl">OUTPUT</span>
+            <span class="out-status" id="out-status"></span>
+          </div>
+          <div id="output-body"><span class="out-info">Click "Run Code" or press Ctrl+Enter to execute…</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PROCTOR PANEL -->
+  <aside id="proctor-panel">
+    <div class="pp-hdr">
+      <span class="pp-title">// LIVE PROCTOR</span>
+      <div class="live-pill"><div class="live-dot"></div><span class="live-txt">LIVE</span></div>
+    </div>
+    <div id="cam-box">
+      <video id="webcam" autoplay muted playsinline></video>
+      <div class="cam-hud"></div>
+      <div id="cam-br"></div>
+      <div id="cam-status-bar">⬤ INITIALISING</div>
+      <div id="cam-error">
+        <div class="cem-icon" id="cem-icon">📷</div>
+        <div class="cem-title" id="cem-title">Camera Required</div>
+        <div class="cem-msg" id="cem-msg">Allow camera access for proctoring.</div>
+        <button class="cem-btn" onclick="startCam()">↺ Retry</button>
+      </div>
+    </div>
+    <div id="trk-section">
+      <div class="trk-hdr-lbl">REAL-TIME TRACKING</div>
+      <div class="trk-row">
+        <div class="trk-lft"><div class="trk-dot" id="trk-cam"></div><span class="trk-name">Camera</span></div>
+        <span class="trk-val" id="val-cam">—</span>
+      </div>
+      <div class="trk-row">
+        <div class="trk-lft"><div class="trk-dot" id="trk-face"></div><span class="trk-name">Face</span></div>
+        <span class="trk-val" id="val-face">—</span>
+      </div>
+      <div class="trk-row">
+        <div class="trk-lft"><div class="trk-dot" id="trk-eye"></div><span class="trk-name">Gaze</span></div>
+        <span class="trk-val" id="val-eye">—</span>
+      </div>
+      <div class="trk-row">
+        <div class="trk-lft"><div class="trk-dot" id="trk-head"></div><span class="trk-name">Head Pose</span></div>
+        <span class="trk-val" id="val-head">—</span>
+      </div>
+      <div class="trk-row">
+        <div class="trk-lft"><div class="trk-dot" id="trk-audio"></div><span class="trk-name">Audio</span></div>
+        <span class="trk-val" id="val-audio">—</span>
+      </div>
+    </div>
+    <div id="risk-section">
+      <div class="risk-top">
+        <span class="risk-lbl">RISK SCORE</span>
+        <span id="risk-badge" class="low">LOW</span>
+      </div>
+      <div class="risk-num-row">
+        <span id="risk-num">0.0</span>
+        <span class="risk-denom">/ 100</span>
+      </div>
+      <div class="risk-track"><div id="risk-fill"></div></div>
+    </div>
+    <div id="viol-hdr">
+      <span class="viol-hdr-lbl">VIOLATIONS</span>
+      <span id="viol-count">0</span>
+    </div>
+    <div id="viols-feed">
+      <div class="vf-empty">✅ No violations</div>
+    </div>
+  </aside>
+
+  <!-- FOOTER -->
+  <footer id="footer">
+    <div class="score-bar" id="score-bar">
+      {% for q in questions %}
+      <div class="sq untried" id="sq-{{ q.id }}"></div>
+      {% endfor %}
+    </div>
+    <span class="ftr-score" id="ftr-score">0 / {{ questions|length }} solved</span>
+    <span class="ftr-hint" style="margin-left:auto">
+      <kbd>Ctrl</kbd>+<kbd>Enter</kbd> Run &nbsp;·&nbsp; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> Test
+    </span>
+  </footer>
+</div>
+
+<div id="terminated-overlay">
+  <div class="to-icon">⛔</div>
+  <div class="to-title">Exam Terminated</div>
+  <div class="to-msg">Your session was ended by the administrator.</div>
+  <a href="/dashboard" class="to-link">← Return to Dashboard</a>
+</div>
+<div id="toast"></div>
+
+<!-- ─ DATA ─ -->
+<script>
+const SESSION_ID = {{ session.id }};
+const QUESTIONS = {{ questions | tojson }};
+</script>
+
+<!-- ─ MONACO EDITOR ─ -->
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+
+<!-- ─ SOCKET.IO ─ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════════ */
+let monacoEditor  = null;
+let currentQId    = QUESTIONS[0].id;
+let timeLeft      = 60 * 60;   // 60 minutes
+let tabSwitched   = false;
+let stream        = null;
+let lastFrameTs   = 0;
+let busy          = false;
+let violCount     = 0;
+let results       = {};        // {qId: 'pass'|'fail'}
+let savedCode     = {};        // {qId: code string}
+
+const socket = io();
+const PISTON_URL = 'https://emkc.org/api/v2/piston/execute';
+
+const LANG_MAP = {
+  python:     { language: 'python',     version: '3.10.0',   monaco: 'python'     },
+  javascript: { language: 'javascript', version: '18.15.0',  monaco: 'javascript' },
+  java:       { language: 'java',       version: '15.0.2',   monaco: 'java'       },
+  cpp:        { language: 'c++',        version: '10.2.0',   monaco: 'cpp'        },
+};
+
+/* ══════════════════════════════════════════════════════════════
+   MONACO INIT
+══════════════════════════════════════════════════════════════ */
+require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+
+require(['vs/editor/editor.main'], function () {
+  monaco.editor.defineTheme('proctorx-dark', {
+    base: 'vs-dark', inherit: true,
+    rules: [
+      { token: 'comment',  foreground: '4A5568', fontStyle: 'italic' },
+      { token: 'keyword',  foreground: 'F43F5E', fontStyle: 'bold'   },
+      { token: 'string',   foreground: '2DD4BF' },
+      { token: 'number',   foreground: 'EAB308' },
+      { token: 'function', foreground: 'FB923C' },
+    ],
+    colors: {
+      'editor.background':          '#0C0A0D',
+      'editor.foreground':          '#EAECF0',
+      'editorLineNumber.foreground':'#4A5568',
+      'editorCursor.foreground':    '#F43F5E',
+      'editor.selectionBackground': '#F43F5E22',
+      'editor.lineHighlightBackground':'#17141C',
+      'editorGutter.background':    '#110E15',
+    }
+  });
+
+  monacoEditor = monaco.editor.create(document.getElementById('editor-mount'), {
+    value: QUESTIONS[0].starter,
+    language: 'python',
+    theme: 'proctorx-dark',
+    fontSize: 14,
+    fontFamily: "'JetBrains Mono', monospace",
+    fontLigatures: true,
+    minimap: { enabled: false },
+    lineNumbers: 'on',
+    roundedSelection: true,
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    tabSize: 4,
+    insertSpaces: true,
+    wordWrap: 'on',
+    renderWhitespace: 'selection',
+    bracketPairColorization: { enabled: true },
+    padding: { top: 12, bottom: 12 },
+  });
+
+  // Ctrl+Enter → Run Code
+  monacoEditor.addCommand(
+    monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+    () => runCode(false)
+  );
+  // Ctrl+Shift+Enter → Run Tests
+  monacoEditor.addCommand(
+    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter,
+    () => runCode(true)
+  );
+
+  loadQuestion(QUESTIONS[0].id);
+});
+
+/* ══════════════════════════════════════════════════════════════
+   QUESTION NAVIGATION
+══════════════════════════════════════════════════════════════ */
+function loadQuestion(qId) {
+  // Save current code
+  if (monacoEditor && currentQId) {
+    savedCode[currentQId] = monacoEditor.getValue();
+  }
+
+  currentQId = qId;
+  const q = QUESTIONS.find(x => x.id === qId);
+  if (!q) return;
+
+  // Update nav buttons
+  document.querySelectorAll('.nav-qbtn').forEach(b => b.classList.remove('active'));
+  const nb = document.getElementById('navq-' + qId);
+  if (nb) nb.classList.add('active');
+
+  // Update problem panel
+  const idx = QUESTIONS.indexOf(q);
+  document.getElementById('prob-num').textContent   = `QUESTION ${idx+1} / ${QUESTIONS.length}`;
+  document.getElementById('prob-title').textContent = q.title;
+  const diffEl = document.getElementById('prob-diff');
+  diffEl.textContent  = q.difficulty;
+  diffEl.className    = `diff-badge diff-${q.difficulty}`;
+  document.getElementById('prob-pts').textContent   = `+${q.points} pts`;
+  document.getElementById('prob-desc').innerHTML    = q.description;
+
+  // Examples
+  const exDiv = document.getElementById('prob-examples');
+  exDiv.innerHTML = q.examples.map(ex => `
+    <div class="example-box">
+      <div class="ex-row"><span class="ex-key">Input:</span><span class="ex-val">${ex.call}</span></div>
+      <div class="ex-row"><span class="ex-key">Output:</span><span class="ex-val">${ex.output}</span></div>
+    </div>`).join('');
+
+  // Restore or load starter code
+  if (monacoEditor) {
+    const code = savedCode[qId] || q.starter;
+    monacoEditor.setValue(code);
+    monacoEditor.setPosition({ lineNumber: monacoEditor.getModel().getLineCount(), column: 1 });
+    monacoEditor.focus();
+  }
+
+  // Reset output
+  setOutput('', '', 'Click "Run Code" or press Ctrl+Enter to execute…');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LANGUAGE CHANGE
+══════════════════════════════════════════════════════════════ */
+function changeLanguage() {
+  const lang = document.getElementById('lang-select').value;
+  const langConf = LANG_MAP[lang];
+  if (monacoEditor && langConf) {
+    monaco.editor.setModelLanguage(monacoEditor.getModel(), langConf.monaco);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CODE EXECUTION
+══════════════════════════════════════════════════════════════ */
+async function runCode(withTests) {
+  if (!monacoEditor) return;
+
+  const lang    = document.getElementById('lang-select').value;
+  const langCfg = LANG_MAP[lang] || LANG_MAP.python;
+  const q       = QUESTIONS.find(x => x.id === currentQId);
+  if (!q) return;
+
+  let code = monacoEditor.getValue();
+
+  // Append test harness when running tests
+  if (withTests) {
+    code += '\n' + q.test_code;
+  }
+
+  const btnRun  = document.getElementById('btn-run');
+  const btnTest = document.getElementById('btn-test');
+  btnRun.disabled = btnTest.disabled = true;
+  setOutput('running', '⟳ Executing…', '');
+
+  try {
+    const payload = {
+      language: langCfg.language,
+      version:  langCfg.version,
+      files: [{ name: 'solution.' + (lang === 'javascript' ? 'js' : lang === 'java' ? 'Main.java' : lang === 'cpp' ? 'main.cpp' : 'py'), content: code }],
+      stdin: '', args: []
+    };
+
+    const resp = await fetch(PISTON_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const run  = data.run || {};
+    const out  = (run.output || '').trim();
+    const err  = (run.stderr || '').trim();
+
+    if (withTests) {
+      const passed = out.includes('ALL_PASS');
+      setOutput(
+        passed ? 'pass' : 'fail',
+        passed ? '✓ All Tests Passed' : '✗ Tests Failed',
+        out || err || 'No output'
+      );
+      // Record result
+      results[currentQId] = passed ? 'pass' : 'fail';
+      markQuestion(currentQId, passed ? 'solved' : 'failed');
+      updateScore();
+    } else {
+      const hasErr = err.length > 0;
+      setOutput(
+        hasErr ? 'fail' : 'pass',
+        hasErr ? '✗ Error' : '✓ Done',
+        (out + (err ? '\n\nSTDERR:\n' + err : '')) || '(no output)'
+      );
+    }
+  } catch (e) {
+    setOutput('fail', '✗ Network Error',
+      'Could not reach the execution server.\nCheck your connection and try again.\n\n' + e.message);
+  }
+
+  btnRun.disabled = btnTest.disabled = false;
+}
+
+function setOutput(status, label, body) {
+  const statusEl = document.getElementById('out-status');
+  const bodyEl   = document.getElementById('output-body');
+  statusEl.textContent = label;
+  statusEl.className   = 'out-status ' + status;
+  if (body !== undefined) {
+    const cls = status === 'pass' ? 'out-pass' : status === 'fail' ? 'out-fail' : status === 'running' ? 'out-info' : '';
+    bodyEl.innerHTML = body ? `<span class="${cls}">${escHtml(body)}</span>` : '';
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function markQuestion(qId, cls) {
+  const nb = document.getElementById('navq-' + qId);
+  if (nb) {
+    nb.classList.remove('solved','failed');
+    nb.classList.add(cls);
+  }
+  const dot = document.getElementById('dot-' + qId);
+  if (dot) {
+    dot.className = 'nq-dot';
+    if (cls === 'solved') dot.style.background = 'var(--green)';
+    else if (cls === 'failed') dot.style.background = 'var(--red)';
+  }
+  const sq = document.getElementById('sq-' + qId);
+  if (sq) {
+    sq.className = 'sq ' + (cls === 'solved' ? 'pass' : cls === 'failed' ? 'fail' : 'untried');
+  }
+}
+
+function updateScore() {
+  const passed = Object.values(results).filter(v => v === 'pass').length;
+  document.getElementById('score-pill').textContent  = passed + ' / ' + QUESTIONS.length;
+  document.getElementById('ftr-score').textContent   = passed + ' / ' + QUESTIONS.length + ' solved';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TIMER
+══════════════════════════════════════════════════════════════ */
+function tickTimer() {
+  const m = Math.floor(timeLeft/60).toString().padStart(2,'0');
+  const s = (timeLeft%60).toString().padStart(2,'0');
+  const el = document.getElementById('timer');
+  if (el) {
+    el.textContent = m + ':' + s;
+    el.className   = timeLeft <= 300 && timeLeft > 120 ? 'warning' : timeLeft <= 120 ? 'critical' : '';
+  }
+  if (timeLeft <= 0) { submitExam(); return; }
+  timeLeft--;
+}
+setInterval(tickTimer, 1000);
+
+/* ══════════════════════════════════════════════════════════════
+   SUBMIT
+══════════════════════════════════════════════════════════════ */
+async function submitExam() {
+  if (!confirm('Submit coding exam? This cannot be undone.')) return;
+  const btn = document.getElementById('submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  try {
+    const res  = await fetch('/code/' + SESSION_ID + '/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ results })
+    });
+    const data = await res.json();
+    if (data.redirect) window.location.href = data.redirect;
+  } catch (_) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit Exam →'; }
+    showToast('Submission failed — try again');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CAMERA + PROCTORING (same as exam.js)
+══════════════════════════════════════════════════════════════ */
+function hideCamError(){ const e=document.getElementById('cam-error'); if(e) e.classList.remove('show'); }
+function showCamError(icon,title,msg){
+  const e=document.getElementById('cam-error'); if(!e) return;
+  document.getElementById('cem-icon').textContent=icon;
+  document.getElementById('cem-title').textContent=title;
+  document.getElementById('cem-msg').innerHTML=msg;
+  e.classList.add('show');
+}
+function setCamStatus(text,cls){
+  const e=document.getElementById('cam-status-bar'); if(!e) return;
+  e.textContent=text; e.className=cls||''; e.id='cam-status-bar';
+}
+
+async function startCam() {
+  hideCamError(); setCamStatus('⬤ REQUESTING…','');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showCamError('🔒','Insecure Context','Camera requires HTTPS or localhost.');
+    setCamStatus('⬤ UNAVAILABLE','err'); return;
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{width:{ideal:320},height:{ideal:240},facingMode:'user',frameRate:{ideal:15}},audio:false
+    });
+    const v=document.getElementById('webcam');
+    v.srcObject=stream;
+    await new Promise((res,rej)=>{v.onloadedmetadata=res;v.onerror=rej;});
+    await v.play();
+    setCamStatus('⬤ ACTIVE','active');
+    setTrk('trk-cam','ok','ON'); hideCamError();
+    requestAnimationFrame(frameLoop);
+  } catch(err) {
+    const msgs={
+      NotAllowedError:['🚫','Permission Denied','Allow camera in browser settings.'],
+      NotFoundError:  ['🔌','No Camera Found', 'Connect a webcam and retry.'],
+      NotReadableError:['⚠️','Camera In Use','Close other apps using the camera.'],
+    };
+    const m=msgs[err.name]||['⚠️','Camera Error',err.name+': '+err.message];
+    showCamError(m[0],m[1],m[2]); setCamStatus('⬤ ERROR','err');
+    setTrk('trk-cam','err','DENIED'); addViol('high','🚫','Webcam access denied');
+  }
+}
+
+function snap(){
+  const v=document.getElementById('webcam');
+  if(!v||!v.videoWidth) return null;
+  const c=document.createElement('canvas');
+  c.width=320;c.height=240;c.getContext('2d').drawImage(v,0,0,320,240);
+  return c.toDataURL('image/jpeg',0.55);
+}
+
+async function frameLoop(ts){
+  if(!stream||!stream.active) return;
+  if(ts-lastFrameTs>=1000&&!busy){
+    lastFrameTs=ts; busy=true; await sendFrame(); busy=false;
+  }
+  requestAnimationFrame(frameLoop);
+}
+
+async function sendFrame(){
+  const frame=snap(); if(!frame) return;
+  try {
+    const res=await fetch('/proctor/frame/'+SESSION_ID,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({frame,tab_switch:tabSwitched})
+    });
+    tabSwitched=false;
+    if(!res.ok) return;
+    const d=await res.json(); if(d.error) return;
+    updateRisk(d);
+    if(d.stats) updateStats(d.stats);
+    if(d.alerts){
+      const icons={high:'🚨',medium:'⚠️',low:'ℹ️'};
+      d.alerts.forEach(a=>addViol(a.severity,icons[a.severity]||'⚠️',a.msg));
+    }
+  } catch(_){}
+}
+
+function updateRisk(d){
+  const score=parseFloat(d.risk_score)||0;
+  const color=score<30?'var(--green)':score<60?'var(--amber)':score<80?'#f97316':'var(--red)';
+  const level=score<30?'LOW':score<60?'MED':score<80?'HIGH':'CRIT';
+  const numEl=document.getElementById('risk-num');
+  if(numEl){numEl.textContent=score.toFixed(1);numEl.style.color=color;}
+  const fill=document.getElementById('risk-fill');
+  if(fill){fill.style.width=score+'%';fill.style.background=color;}
+  const badge=document.getElementById('risk-badge');
+  if(badge){badge.textContent=level;badge.className=level.toLowerCase();}
+}
+
+function updateStats(s){
+  if(!s) return;
+  const camOk=stream&&stream.active;
+  setTrk('trk-cam',camOk?'ok':'err',camOk?'ON':'OFF');
+  const fc=s.face_count!=null?s.face_count:0;
+  if(fc===1) setTrk('trk-face','ok','1 face');
+  else if(fc>1) setTrk('trk-face','warn',fc+' faces');
+  else setTrk('trk-face','err','none');
+  const g=s.gaze||'unknown';
+  if(g==='center') setTrk('trk-eye','ok','center');
+  else if(g==='unknown') setTrk('trk-eye','err','—');
+  else setTrk('trk-eye','warn',g);
+  const h=s.head||'forward';
+  if(h==='forward') setTrk('trk-head','ok','fwd');
+  else if(h==='unknown') setTrk('trk-head','err','—');
+  else setTrk('trk-head','warn',h);
+  setTrk('trk-audio',s.talking?'err':'ok',s.talking?'talking':'quiet');
+}
+
+function setTrk(dotId,state,val){
+  const dot=document.getElementById(dotId);
+  if(dot) dot.className='trk-dot '+state;
+  const v=document.getElementById('val-'+dotId.replace('trk-',''));
+  if(v) v.textContent=val||'—';
+}
+
+function addViol(sev,icon,msg){
+  const feed=document.getElementById('viols-feed'); if(!feed) return;
+  const empty=feed.querySelector('.vf-empty'); if(empty) empty.remove();
+  violCount++;
+  const cnt=document.getElementById('viol-count'); if(cnt) cnt.textContent=violCount;
+  const div=document.createElement('div');
+  div.className='viol-item '+sev;
+  const now=new Date();
+  div.innerHTML=`<span class="vi-icon">${icon}</span><div><div class="vi-msg">${msg}</div><div class="vi-time">${now.toLocaleTimeString()}</div></div>`;
+  feed.prepend(div);
+  if(feed.children.length>50) feed.lastChild.remove();
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+/* ── TAB / VISIBILITY ── */
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){
+    tabSwitched=true;
+    const w=document.getElementById('tab-warning');
+    if(w){w.classList.add('show');setTimeout(()=>w.classList.remove('show'),4000);}
+    addViol('high','🚨','Tab switch detected!');
+  }
+});
+window.addEventListener('blur',()=>{tabSwitched=true;});
+
+/* ── SOCKET.IO ── */
+socket.on('session_terminated',function(d){
+  if(d.session_id===SESSION_ID){
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    const ov=document.getElementById('terminated-overlay');
+    if(ov) ov.classList.add('show');
+  }
+});
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded',function(){
+  startCam();
+});
+</script>
+</body>
+</html>

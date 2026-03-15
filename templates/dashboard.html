@@ -1,0 +1,84 @@
+{% extends 'layout_dashboard.html' %}
+{% set active_page = 'dashboard' %}
+
+{% block content %}
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="hero-grid-lines"></div>
+  <canvas id="neural-canvas"></canvas>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <div class="hero-eyebrow-dot"></div>
+      <span class="hero-eyebrow-text">AI PROCTORING ACTIVE</span>
+    </div>
+    <div class="hero-greeting">
+      <span class="hi">Hello,</span><br>
+      <span class="name">{{ current_user.username }}</span> 👋
+    </div>
+    <p class="hero-sub">Welcome back to your secure exam portal. Your sessions are monitored by real-time AI for integrity.</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-val" data-count="{{ exams|length }}">{{ exams|length }}</span>
+        <div class="hero-stat-label">
+          <div class="hero-stat-dot" style="background:var(--indigo-2)"></div>
+          Available Exams
+        </div>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-val" data-count="{{ sessions|length }}">{{ sessions|length }}</span>
+        <div class="hero-stat-label">
+          <div class="hero-stat-dot" style="background:var(--emerald)"></div>
+          Completed
+        </div>
+      </div>
+      <div class="hero-stat">
+        {% set avg_score = (sessions | map(attribute='score') | select | list | sum / sessions|length) | round(1) if sessions else 0 %}
+        <span class="hero-stat-val" data-count="{{ avg_score }}">{{ avg_score }}</span>
+        <div class="hero-stat-label">
+          <div class="hero-stat-dot" style="background:var(--cyan)"></div>
+          Avg Score %
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ STAT CARDS ═══ -->
+<div class="stat-cards">
+  <div class="stat-card sc-indigo" onclick="window.location.href='/exams'">
+    <div class="stat-icon-wrap">📋</div>
+    <div class="stat-card-val" data-count="{{ exams|length }}">{{ exams|length }}</div>
+    <div class="stat-card-label">Available Exams</div>
+    <div class="stat-card-bar">
+      <div class="stat-card-fill" style="width:{{ [exams|length * 20, 100]|min }}%;background:var(--indigo);transition-delay:0.2s"></div>
+    </div>
+  </div>
+  <div class="stat-card sc-cyan" onclick="window.location.href='/history'">
+    <div class="stat-icon-wrap">✅</div>
+    <div class="stat-card-val" data-count="{{ sessions|length }}">{{ sessions|length }}</div>
+    <div class="stat-card-label">Exams Completed</div>
+    <div class="stat-card-bar">
+      <div class="stat-card-fill" style="width:{{ [sessions|length * 20, 100]|min }}%;background:var(--cyan);transition-delay:0.3s"></div>
+    </div>
+  </div>
+  <div class="stat-card sc-emerald">
+    <div class="stat-icon-wrap">📈</div>
+    <div class="stat-card-val" data-count="{{ avg_score }}">{{ avg_score }}</div>
+    <div class="stat-card-label">Average Score %</div>
+    <div class="stat-card-bar">
+      <div class="stat-card-fill" style="width:{{ avg_score }}%;background:var(--emerald);transition-delay:0.4s"></div>
+    </div>
+  </div>
+  <div class="stat-card sc-amber">
+    <div class="stat-icon-wrap">🛡️</div>
+    {% set avg_risk = (sessions | map(attribute='final_risk_score') | select | list | sum / sessions|length) | round(1) if sessions else 0 %}
+    <div class="stat-card-val" data-count="{{ avg_risk }}">{{ avg_risk }}</div>
+    <div class="stat-card-label">Avg Risk Score</div>
+    <div class="stat-card-bar">
+      <div class="stat-card-fill" style="width:{{ avg_risk }}%;background:var(--amber);transition-delay:0.5s"></div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/hero_canvas.js') }}"></script>
+{% endblock %}

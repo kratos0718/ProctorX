@@ -1,0 +1,175 @@
+{% extends 'layout_dashboard.html' %}
+{% set active_page = 'exams' %}
+{% set title = 'Exams' %}
+
+{% block extra_head %}
+<style>
+/* ══════════════════════════════════════
+   CONTENT GRID
+══════════════════════════════════════ */
+.content-grid {
+  margin:20px 32px 32px;
+  animation:fadeUp 0.5s 0.2s ease both;
+}
+
+.section-hd {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:20px;
+}
+.section-hd-left { display:flex; align-items:center; gap:10px; }
+.section-hd-title { font-size:18px; font-weight:700; color:var(--text); }
+.section-hd-count {
+  font-size:12px; font-family:var(--font-m); font-weight:600;
+  color:var(--indigo-2); background:var(--indigo-dim);
+  padding:3px 10px; border-radius:20px;
+}
+
+/* ══════════════════════════════════════
+   EXAM CARDS
+══════════════════════════════════════ */
+.exam-cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:16px; }
+
+.exam-card {
+  background:var(--navy-3); border:1px solid var(--border);
+  border-radius:var(--r-2xl); padding:24px;
+  display:flex; flex-direction:column; gap:16px;
+  transition:all 0.3s cubic-bezier(0.34,1.2,0.64,1);
+  cursor:pointer; position:relative; overflow:hidden;
+  text-decoration:none; color:inherit;
+}
+.exam-card::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,var(--ec-color,rgba(37,99,235,0.06)),transparent 60%);
+  opacity:0; transition:opacity 0.3s;
+}
+.exam-card:hover {
+  transform:translateY(-4px) scale(1.01);
+  border-color:var(--ec-border,rgba(37,99,235,0.3));
+  box-shadow:0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px var(--ec-border,rgba(37,99,235,0.2));
+}
+.exam-card:hover::after { opacity:1; }
+.exam-card:hover .ec-icon { transform:scale(1.1) rotate(-5deg); }
+.exam-card:hover .ec-arrow { transform:translateX(4px); opacity:1; }
+
+.ec-header { display:flex; gap:14px; position:relative; z-index:1; }
+.ec-icon-wrap {
+  width:56px; height:56px; border-radius:16px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:26px;
+  transition:transform 0.3s;
+}
+.ec-icon { transition:transform 0.3s; }
+.ec-title-area { flex:1; }
+.ec-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:6px; display:flex; align-items:center; gap:8px; }
+.ec-ai-badge {
+  font-size:10px; font-weight:700; font-family:var(--font-m);
+  letter-spacing:0.5px; color:var(--cyan); background:var(--cyan-dim);
+  border:1px solid rgba(34,211,238,0.2); padding:3px 8px; border-radius:20px;
+}
+
+.ec-difficulty {
+  font-size:10px; font-weight:700; font-family:var(--font-m);
+  padding:3px 9px; border-radius:20px;
+}
+.diff-Easy   { background:var(--emerald-dim); color:var(--emerald); }
+.diff-Medium { background:var(--amber-dim);   color:var(--amber); }
+.diff-Hard   { background:var(--rose-dim);    color:var(--rose); }
+
+.ec-desc { font-size:13px; color:var(--text-3); line-height:1.5; position:relative; z-index:1; flex:1; }
+
+.ec-meta { display:flex; align-items:center; gap:14px; flex-wrap:wrap; position:relative; z-index:1; margin-top:4px; padding-top:16px; border-top:1px solid var(--border); }
+.ec-meta-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-2); font-weight:500; }
+
+.ec-start-btn {
+  display:flex; align-items:center; gap:7px;
+  padding:10px 20px; border:none; border-radius:12px;
+  font-size:13px; font-weight:700; cursor:pointer;
+  transition:all 0.2s; font-family:var(--font-d);
+  white-space:nowrap; position:relative; z-index:1; margin-top:8px; width:100%; justify-content:center;
+}
+.ec-arrow { transition:transform 0.2s, opacity 0.2s; opacity:0.7; }
+
+/* Subject colors */
+.sub-dsa    { --ec-color:rgba(37,99,235,0.06);  --ec-border:rgba(37,99,235,0.25);  }
+.sub-dsa    .ec-icon-wrap { background:rgba(37,99,235,0.15); }
+.sub-dsa    .ec-start-btn { background:var(--indigo); color:#fff; box-shadow:0 4px 14px var(--indigo-glo); }
+.sub-dsa    .ec-start-btn:hover { background:var(--indigo-2); transform:translateY(-1px); }
+
+.sub-dbms   { --ec-color:rgba(16,185,129,0.06); --ec-border:rgba(16,185,129,0.25); }
+.sub-dbms   .ec-icon-wrap { background:rgba(16,185,129,0.15); }
+.sub-dbms   .ec-start-btn { background:var(--emerald); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,0.3); }
+.sub-dbms   .ec-start-btn:hover { background:#0ea572; transform:translateY(-1px); }
+
+.sub-os     { --ec-color:rgba(236,72,153,0.06); --ec-border:rgba(236,72,153,0.25); }
+.sub-os     .ec-icon-wrap { background:rgba(236,72,153,0.15); }
+.sub-os     .ec-start-btn { background:#ec4899; color:#fff; box-shadow:0 4px 14px rgba(236,72,153,0.3); }
+.sub-os     .ec-start-btn:hover { background:#db2777; transform:translateY(-1px); }
+
+.sub-java   { --ec-color:rgba(251,191,36,0.06); --ec-border:rgba(251,191,36,0.25); }
+.sub-java   .ec-icon-wrap { background:rgba(251,191,36,0.15); }
+.sub-java   .ec-start-btn { background:var(--amber); color:#000; box-shadow:0 4px 14px rgba(251,191,36,0.3); }
+.sub-java   .ec-start-btn:hover { background:#f59e0b; transform:translateY(-1px); }
+
+.sub-daa    { --ec-color:rgba(244,63,94,0.06);  --ec-border:rgba(244,63,94,0.25); }
+.sub-daa    .ec-icon-wrap { background:rgba(244,63,94,0.15); }
+.sub-daa    .ec-start-btn { background:var(--rose); color:#fff; box-shadow:0 4px 14px rgba(244,63,94,0.3); }
+.sub-daa    .ec-start-btn:hover { background:#e11d48; transform:translateY(-1px); }
+
+.sub-python { --ec-color:rgba(34,211,238,0.06); --ec-border:rgba(34,211,238,0.25); }
+.sub-python .ec-icon-wrap { background:rgba(34,211,238,0.12); }
+.sub-python .ec-start-btn { background:var(--cyan); color:#000; box-shadow:0 4px 14px var(--cyan-glo); }
+.sub-python .ec-start-btn:hover { background:#06b6d4; transform:translateY(-1px); }
+
+.sub-ml     { --ec-color:rgba(37,99,235,0.06); --ec-border:rgba(37,99,235,0.25); }
+.sub-ml     .ec-icon-wrap { background:rgba(37,99,235,0.15); }
+.sub-ml     .ec-start-btn { background:#2563EB; color:#fff; box-shadow:0 4px 14px rgba(37,99,235,0.3); }
+.sub-ml     .ec-start-btn:hover { background:#1d4ed8; transform:translateY(-1px); }
+
+.sub-default { --ec-color:rgba(20,184,166,0.06); --ec-border:rgba(20,184,166,0.25); }
+.sub-default .ec-icon-wrap { background:rgba(20,184,166,0.15); }
+.sub-default .ec-start-btn { background:#14B8A6; color:#fff; box-shadow:0 4px 14px rgba(20,184,166,0.3); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-grid">
+  <div class="section-hd">
+    <div class="section-hd-left">
+      <div class="section-hd-title">Computer Science Course Exams</div>
+      <div class="section-hd-count">{{ available_exams|length }} subjects</div>
+    </div>
+  </div>
+
+  <div class="exam-cards">
+    {% for exam in available_exams %}
+      {% set m = meta.get(exam, meta['Default']) %}
+      <a href="/exam/start/{{ exam }}" class="exam-card {{ m.sub }}">
+        <div class="ec-header">
+          <div class="ec-icon-wrap"><span class="ec-icon">{{ m.icon }}</span></div>
+          <div class="ec-title-area">
+            <div class="ec-title">{{ exam }} <div class="ec-ai-badge">AI SECURED</div></div>
+            <div class="ec-difficulty diff-{{ m.diff }}">{{ m.diff }}</div>
+          </div>
+        </div>
+        
+        <div class="ec-desc">{{ m.desc }}</div>
+        
+        <div class="ec-meta">
+          <div class="ec-meta-item"><span>👨‍🏫</span> {{ m.instructor }}</div>
+          <div class="ec-meta-item"><span>⏱️</span> {{ m.dur }} mins</div>
+          <div class="ec-meta-item"><span>📝</span> {{ m.qcount }} Qs</div>
+        </div>
+
+        <button class="ec-start-btn">
+          Start Exam <span class="ec-arrow">→</span>
+        </button>
+      </a>
+    {% else %}
+    <div class="empty-state" style="grid-column:1/-1; background:var(--navy-3); border-radius:var(--r-2xl); border:1px solid var(--border)">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">No exams available</div>
+      <div class="empty-sub">Check back later or contact your instructor.</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

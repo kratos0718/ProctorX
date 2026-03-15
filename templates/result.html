@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Result — {{ session.exam_name }} · ProctorX</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg0:#0C0A0D;--bg1:#110E15;--bg2:#17141C;--bg3:#1E1B23;--bg4:#25222A;
+  --blue:#F43F5E;--cyan:#2DD4BF;--green:#22C55E;--amber:#F59E0B;--red:#F87171;--orange:#FB923C;
+  --grad:linear-gradient(135deg,#F43F5E,#2DD4BF);
+  --grad-amber:linear-gradient(135deg,#F59E0B,#FB923C);
+  --grad-red:linear-gradient(135deg,#F87171,#FB923C);
+  --b-dim:rgba(244,63,94,.10);--b-mid:rgba(244,63,94,.20);--b-glow:rgba(244,63,94,.28);
+  --g-dim:rgba(34,197,94,.12);--g-glow:rgba(34,197,94,.25);
+  --a-dim:rgba(245,158,11,.12);--a-glow:rgba(245,158,11,.22);
+  --r-dim:rgba(248,113,113,.12);--r-glow:rgba(248,113,113,.22);
+  --bdr:rgba(255,255,255,.07);--bdr2:rgba(255,255,255,.13);
+  --glass:rgba(255,255,255,.03);--glass2:rgba(255,255,255,.06);
+  --t1:#EAECF0;--t2:#B0B9C8;--t3:#7A879C;--t4:#4A5568;
+  --f:'Plus Jakarta Sans',sans-serif;--fm:'JetBrains Mono',monospace;
+}
+html,body{min-height:100%;background:var(--bg0);color:var(--t1);font-family:var(--f);-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:rgba(244,63,94,.25);border-radius:4px;}
+
+/* ── VORTEX BG ── */
+#vortex-bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+/* ── SCANLINES ── */
+#scanlines{position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.02) 2px,rgba(0,0,0,.02) 4px);}
+
+/* ── PAGE ── */
+.page{
+  position:relative;z-index:2;min-height:100vh;
+  display:flex;align-items:flex-start;justify-content:center;
+  padding:40px 20px 60px;
+}
+
+/* ── CARD ── */
+.result-card{
+  width:100%;max-width:760px;
+  animation:cardUp .6s cubic-bezier(.22,.68,0,1.2) both;
+}
+@keyframes cardUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── HERO ── */
+.hero{
+  background:var(--bg1);border:1px solid var(--bdr2);border-radius:24px;
+  padding:40px 36px 32px;text-align:center;position:relative;overflow:hidden;
+  margin-bottom:14px;box-shadow:0 24px 64px rgba(0,0,0,.5);
+}
+.hero::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.hero.pass::before{background:var(--grad);}
+.hero.mid::before{background:var(--grad-amber);}
+.hero.fail::before{background:var(--grad-red);}
+
+/* Radial glow behind ring */
+.hero::after{
+  content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);
+  width:400px;height:300px;border-radius:50%;pointer-events:none;opacity:.12;
+}
+.hero.pass::after{background:radial-gradient(circle,#F43F5E,transparent 70%);}
+.hero.mid::after{background:radial-gradient(circle,#F59E0B,transparent 70%);}
+.hero.fail::after{background:radial-gradient(circle,#F87171,transparent 70%);}
+
+.result-emoji{font-size:48px;display:block;margin-bottom:12px;animation:bounce 1s ease .3s both;}
+@keyframes bounce{0%{transform:scale(0);}60%{transform:scale(1.18);}80%{transform:scale(.92);}100%{transform:scale(1);}}
+
+.result-title{font-size:28px;font-weight:800;color:var(--t1);margin-bottom:6px;}
+.result-sub{font-size:14px;color:var(--t3);margin-bottom:28px;}
+
+/* ── SCORE RING ── */
+.ring-wrap{position:relative;width:160px;height:160px;margin:0 auto 20px;}
+.ring-wrap svg{transform:rotate(-90deg);}
+.ring-bg{stroke:rgba(255,255,255,.06);}
+.ring-fill{transition:stroke-dasharray 1.4s cubic-bezier(.4,0,.2,1);}
+.ring-inner{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;}
+.ring-pct{font-family:var(--fm);font-size:36px;font-weight:800;line-height:1;}
+.ring-lbl{font-size:10px;font-weight:700;color:var(--t4);letter-spacing:1.5px;font-family:var(--fm);margin-top:3px;}
+
+/* ── STATS GRID ── */
+.stats-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;
+}
+.stat-card{
+  background:var(--bg1);border:1px solid var(--bdr);border-radius:16px;
+  padding:18px 16px;position:relative;overflow:hidden;
+  transition:border-color .2s,transform .2s,box-shadow .2s;
+  animation:cardUp .5s ease both;
+}
+.stat-card:hover{border-color:var(--bdr2);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.3);}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.blue::before{background:var(--grad);}
+.stat-card.green::before{background:linear-gradient(90deg,#22C55E,#2DD4BF);}
+.stat-card.amber::before{background:linear-gradient(90deg,#F59E0B,#FB923C);}
+.stat-card.red::before{background:linear-gradient(90deg,#F87171,#FB923C);}
+.stat-card.cyan::before{background:linear-gradient(90deg,#2DD4BF,#F43F5E);}
+.stat-card.teal::before{background:linear-gradient(90deg,#2DD4BF,#2DD4BF);}
+
+.stat-icon{font-size:20px;margin-bottom:8px;}
+.stat-val{font-family:var(--fm);font-size:22px;font-weight:800;color:var(--t1);line-height:1;}
+.stat-lbl{font-size:10px;font-weight:600;color:var(--t4);margin-top:4px;letter-spacing:.4px;}
+
+/* ── SUBJECT BANNER ── */
+.subject-banner{
+  background:var(--bg1);border:1px solid var(--bdr);border-radius:14px;
+  padding:14px 20px;display:flex;align-items:center;gap:14px;margin-bottom:14px;
+  animation:cardUp .5s .25s ease both;
+}
+.sb-icon{width:40px;height:40px;border-radius:11px;background:var(--grad);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  box-shadow:0 4px 14px var(--b-glow);flex-shrink:0;}
+.sb-name{font-size:15px;font-weight:700;color:var(--t1);}
+.sb-session{font-size:11px;color:var(--t4);font-family:var(--fm);margin-top:2px;}
+
+/* ── VIOLATIONS SECTION ── */
+.viols-section{
+  background:var(--bg1);border:1px solid var(--bdr);border-radius:16px;
+  overflow:hidden;margin-bottom:14px;animation:cardUp .5s .35s ease both;
+}
+.viols-hdr{
+  padding:12px 18px;background:var(--bg2);border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.viols-title{font-size:11px;font-weight:700;color:var(--t3);letter-spacing:1px;font-family:var(--fm);}
+.viols-count-pill{background:var(--r-dim);border:1px solid rgba(248,113,113,.2);
+  color:var(--red);font-size:10px;font-weight:800;padding:2px 10px;border-radius:99px;font-family:var(--fm);}
+.viols-count-pill.clean{background:var(--g-dim);border-color:rgba(34,197,94,.2);color:var(--green);}
+.viols-empty{padding:24px;text-align:center;color:var(--t4);}
+.viols-empty-icon{font-size:28px;display:block;margin-bottom:6px;}
+.viols-empty-txt{font-size:12px;}
+.viol-row{
+  display:flex;align-items:center;gap:12px;padding:10px 18px;
+  border-bottom:1px solid var(--bdr);
+}
+.viol-row:last-child{border-bottom:none;}
+.viol-row:hover{background:var(--glass);}
+.vr-icon{font-size:14px;flex-shrink:0;}
+.vr-type{font-size:12px;font-weight:600;color:var(--t2);flex:1;}
+.vr-time{font-size:10px;color:var(--t4);font-family:var(--fm);}
+.vr-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:4px;font-family:var(--fm);}
+.vr-badge.high{background:var(--r-dim);color:var(--red);}
+.vr-badge.medium{background:var(--a-dim);color:var(--amber);}
+.vr-badge.low{background:var(--b-dim);color:var(--blue);}
+
+/* ── ACTIONS ── */
+.actions{
+  display:flex;align-items:center;gap:12px;
+  animation:cardUp .5s .45s ease both;
+}
+.btn-dashboard{
+  display:flex;align-items:center;gap:8px;padding:12px 22px;
+  border-radius:12px;background:var(--glass2);border:1px solid var(--bdr2);
+  color:var(--t2);font-size:14px;font-weight:600;font-family:var(--f);
+  cursor:pointer;transition:all .2s;text-decoration:none;
+}
+.btn-dashboard:hover{background:var(--bg3);color:var(--t1);border-color:var(--bdr2);}
+.btn-report{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 22px;border-radius:12px;background:var(--grad);
+  color:#fff;font-size:14px;font-weight:700;font-family:var(--f);
+  cursor:pointer;transition:all .2s;text-decoration:none;
+  box-shadow:0 4px 18px var(--b-glow);
+}
+.btn-report:hover{opacity:.88;transform:translateY(-1px);box-shadow:0 6px 24px var(--b-glow);}
+.btn-retake{
+  display:flex;align-items:center;gap:8px;padding:12px 20px;
+  border-radius:12px;background:var(--bg2);border:1px solid var(--bdr2);
+  color:var(--blue);font-size:14px;font-weight:600;font-family:var(--f);
+  cursor:pointer;transition:all .2s;text-decoration:none;
+}
+.btn-retake:hover{background:var(--b-dim);border-color:var(--blue);}
+
+/* ── CONFETTI (pass only) ── */
+.confetti-piece{
+  position:fixed;width:8px;height:8px;border-radius:2px;
+  top:-10px;animation:confFall linear infinite;z-index:3;pointer-events:none;
+}
+@keyframes confFall{0%{transform:translateY(0) rotate(0);}100%{transform:translateY(110vh) rotate(720deg);}}
+
+/* ── PROCTORING TAG ── */
+.proctor-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--bg2);border:1px solid var(--bdr);border-radius:99px;
+  padding:4px 12px;font-size:10px;color:var(--t4);font-family:var(--fm);
+  margin-top:12px;
+}
+.pt-dot{width:5px;height:5px;border-radius:50%;}
+
+/* Delay helpers */
+.d1{animation-delay:.05s;}.d2{animation-delay:.10s;}.d3{animation-delay:.15s;}
+.d4{animation-delay:.20s;}.d5{animation-delay:.25s;}.d6{animation-delay:.30s;}
+</style>
+</head>
+<body>
+
+<div id="vortex-bg"></div>
+<div id="scanlines"></div>
+
+{% set final_score = ((score / total * 100)|round|int) if total > 0 else 0 %}
+{% set risk        = session.final_risk_score or 0 %}
+{% set focus       = [0, 100 - risk]|max %}
+{% set total_viols = session.total_violations or violations|length %}
+{% set duration    = ((session.end_time - session.start_time).seconds // 60) if session.end_time else 0 %}
+
+{% if final_score >= 70 %}
+  {% set tier = 'pass' %}
+  {% set emoji = '🏆' %}
+  {% set title = 'Excellent Work!' %}
+  {% set subtitle = 'Outstanding performance — you crushed it!' %}
+  {% set ring_color = '#22C55E' %}
+{% elif final_score >= 40 %}
+  {% set tier = 'mid' %}
+  {% set emoji = '📊' %}
+  {% set title = 'Good Effort!' %}
+  {% set subtitle = 'Solid attempt — review and you\'ll do even better.' %}
+  {% set ring_color = '#F59E0B' %}
+{% else %}
+  {% set tier = 'fail' %}
+  {% set emoji = '📚' %}
+  {% set title = 'Keep Practicing' %}
+  {% set subtitle = 'Review the material and give it another shot!' %}
+  {% set ring_color = '#F87171' %}
+{% endif %}
+
+{% set ring_len = 376.99 %}
+{% set ring_fill = (final_score / 100 * ring_len)|round(2) %}
+
+<div class="page">
+  <div class="result-card">
+
+    <!-- HERO -->
+    <div class="hero {{ tier }}">
+      <span class="result-emoji">{{ emoji }}</span>
+      <div class="result-title">{{ title }}</div>
+      <div class="result-sub">{{ subtitle }}</div>
+
+      <!-- Score ring -->
+      <div class="ring-wrap">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <circle class="ring-bg" cx="80" cy="80" r="60" fill="none" stroke-width="10"/>
+          <circle class="ring-fill" id="ring-fill" cx="80" cy="80" r="60" fill="none"
+            stroke="{{ ring_color }}" stroke-width="10"
+            stroke-dasharray="0 {{ ring_len }}"
+            stroke-linecap="round"
+            style="filter:drop-shadow(0 0 8px {{ ring_color }}88)"/>
+        </svg>
+        <div class="ring-inner">
+          <div class="ring-pct" id="ring-pct" style="color:{{ ring_color }}">0%</div>
+          <div class="ring-lbl">SCORE</div>
+        </div>
+      </div>
+
+      <div class="proctor-tag">
+        <div class="pt-dot" style="background:{% if risk < 30 %}var(--green){% elif risk < 60 %}var(--amber){% else %}var(--red){% endif %}"></div>
+        Proctored · Session #{{ session.id }}
+      </div>
+    </div>
+
+    <!-- SUBJECT BANNER -->
+    <div class="subject-banner">
+      <div class="sb-icon">🎓</div>
+      <div>
+        <div class="sb-name">{{ session.exam_name }}</div>
+        <div class="sb-session">{{ current_user.username }} · {{ session.start_time.strftime('%d %b %Y, %H:%M') if session.start_time else '—' }}</div>
+      </div>
+    </div>
+
+    <!-- STATS GRID -->
+    <div class="stats-grid">
+      <div class="stat-card blue d1">
+        <div class="stat-icon">📝</div>
+        <div class="stat-val">{{ score }} / {{ total }}</div>
+        <div class="stat-lbl">Correct Answers</div>
+      </div>
+      <div class="stat-card {% if final_score >= 70 %}green{% elif final_score >= 40 %}amber{% else %}red{% endif %} d2">
+        <div class="stat-icon">{% if final_score >= 70 %}🏅{% elif final_score >= 40 %}📈{% else %}🔄{% endif %}</div>
+        <div class="stat-val" style="color:{{ ring_color }}">{{ final_score }}%</div>
+        <div class="stat-lbl">Accuracy</div>
+      </div>
+      <div class="stat-card cyan d3">
+        <div class="stat-icon">⏱</div>
+        <div class="stat-val">{{ duration }}m</div>
+        <div class="stat-lbl">Time Taken</div>
+      </div>
+      <div class="stat-card {% if focus >= 70 %}green{% else %}amber{% endif %} d4">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-val" style="color:{% if focus >= 70 %}var(--green){% else %}var(--amber){% endif %}">{{ focus|round(1) }}%</div>
+        <div class="stat-lbl">Focus Score</div>
+      </div>
+      <div class="stat-card {% if risk < 30 %}green{% elif risk < 60 %}amber{% else %}red{% endif %} d5">
+        <div class="stat-icon">🛡</div>
+        <div class="stat-val" style="color:{% if risk < 30 %}var(--green){% elif risk < 60 %}var(--amber){% else %}var(--red){% endif %}">{{ risk|round(1) }}</div>
+        <div class="stat-lbl">Risk Score</div>
+      </div>
+      <div class="stat-card {% if total_viols == 0 %}teal{% else %}red{% endif %} d6">
+        <div class="stat-icon">{% if total_viols == 0 %}✅{% else %}⚠️{% endif %}</div>
+        <div class="stat-val" style="color:{% if total_viols == 0 %}var(--green){% else %}var(--red){% endif %}">{{ total_viols }}</div>
+        <div class="stat-lbl">Violations</div>
+      </div>
+    </div>
+
+    <!-- VIOLATIONS LIST -->
+    <div class="viols-section">
+      <div class="viols-hdr">
+        <span class="viols-title">VIOLATION LOG</span>
+        <span class="viols-count-pill {% if violations|length == 0 %}clean{% endif %}">
+          {{ violations|length }} {{ 'violation' if violations|length == 1 else 'violations' }}
+        </span>
+      </div>
+      {% if violations %}
+        {% for v in violations[:8] %}
+        <div class="viol-row">
+          <span class="vr-icon">{% if v.severity == 'high' %}🚨{% elif v.severity == 'medium' %}⚠️{% else %}ℹ️{% endif %}</span>
+          <span class="vr-type">{{ v.violation_type | replace('_', ' ') | title }}</span>
+          <span class="vr-badge {{ v.severity }}">{{ v.severity | upper }}</span>
+          <span class="vr-time">{{ v.timestamp.strftime('%H:%M:%S') if v.timestamp else '—' }}</span>
+        </div>
+        {% endfor %}
+        {% if violations|length > 8 %}
+        <div class="viol-row" style="justify-content:center;color:var(--t4);font-size:11px;">
+          +{{ violations|length - 8 }} more — download full report
+        </div>
+        {% endif %}
+      {% else %}
+        <div class="viols-empty">
+          <span class="viols-empty-icon">✅</span>
+          <span class="viols-empty-txt">No violations recorded — clean session!</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="actions">
+      <a href="/dashboard" class="btn-dashboard">← Dashboard</a>
+      <a href="/report/{{ session.id }}" class="btn-report">📄 Download Report</a>
+      <a href="/exam/start/{{ session.exam_name }}" class="btn-retake">↺ Retake</a>
+    </div>
+
+  </div>
+</div>
+
+<!-- Vortex + simplex -->
+<script src="https://cdn.jsdelivr.net/npm/simplex-noise@2.4.0/simplex-noise.min.js"></script>
+<script src="/static/js/vortex.js"></script>
+<script>
+  const FINAL_SCORE = {{ final_score }};
+  const RING_LEN    = {{ ring_len }};
+  const RING_FILL   = {{ ring_fill }};
+  const RING_COLOR  = '{{ ring_color }}';
+
+  /* ── Vortex background ── */
+  window.addEventListener('load', function () {
+    mountVortex('vortex-bg', {
+      particleCount: 450,
+      baseHue: FINAL_SCORE >= 70 ? 155 : FINAL_SCORE >= 40 ? 40 : 0,
+      rangeY: 500,
+      baseSpeed: 0.15,
+      rangeSpeed: 1.0,
+      backgroundColor: 'rgba(0,0,0,0)'
+    });
+  });
+
+  /* ── Animate score ring on load ── */
+  window.addEventListener('DOMContentLoaded', function () {
+    /* ring fill */
+    setTimeout(function () {
+      var rf = document.getElementById('ring-fill');
+      if (rf) rf.setAttribute('stroke-dasharray', RING_FILL + ' ' + RING_LEN);
+    }, 200);
+
+    /* count-up number */
+    var pctEl = document.getElementById('ring-pct');
+    var start = 0;
+    var duration = 1200;
+    var t0 = null;
+    function step(ts) {
+      if (!t0) t0 = ts;
+      var progress = Math.min((ts - t0) / duration, 1);
+      var ease = 1 - Math.pow(1 - progress, 3);
+      var current = Math.round(ease * FINAL_SCORE);
+      if (pctEl) pctEl.textContent = current + '%';
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    setTimeout(function () { requestAnimationFrame(step); }, 200);
+
+    /* ── Confetti for pass ── */
+    if (FINAL_SCORE >= 70) {
+      var colors = ['#F43F5E','#2DD4BF','#22C55E','#F59E0B','#2DD4BF','#FB923C'];
+      for (var i = 0; i < 60; i++) {
+        (function(i) {
+          var c = document.createElement('div');
+          c.className = 'confetti-piece';
+          c.style.left       = Math.random() * 100 + 'vw';
+          c.style.background = colors[i % colors.length];
+          c.style.animationDuration  = (Math.random() * 3 + 2) + 's';
+          c.style.animationDelay     = (Math.random() * 2) + 's';
+          c.style.width  = (Math.random() * 8 + 4) + 'px';
+          c.style.height = (Math.random() * 8 + 4) + 'px';
+          c.style.opacity = Math.random() * 0.7 + 0.3;
+          document.body.appendChild(c);
+          setTimeout(function () { c.remove(); }, 6000);
+        })(i);
+      }
+    }
+  });
+</script>
+</body>
+</html>

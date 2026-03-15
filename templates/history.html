@@ -1,0 +1,92 @@
+{% extends 'layout_dashboard.html' %}
+{% set active_page = 'history' %}
+{% set title = 'Exam History' %}
+
+{% block extra_head %}
+<style>
+.history-card {
+  background:var(--navy-3); border:1px solid var(--border);
+  border-radius:var(--r-2xl); overflow:hidden; margin:20px 32px 32px;
+  animation:fadeUp 0.5s ease both;
+  box-shadow:0 12px 32px rgba(0,0,0,0.2);
+}
+.history-head {
+  padding:20px 24px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--glass);
+}
+.history-title { font-size:18px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:10px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; padding:14px 24px; color:var(--text-3); font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; font-family:var(--font-m); border-bottom:1px solid var(--border); background:rgba(0,0,0,0.2); }
+td { padding:16px 24px; border-bottom:1px solid rgba(255,255,255,0.03); color:var(--text-2); transition:background 0.2s; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--glass-2); cursor:default; }
+.td-name { color:var(--text); font-weight:600; font-size:14px; }
+.td-mono { font-family:var(--font-m); font-size:13px; }
+.report-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:7px 14px; border-radius:var(--r-md);
+  background:var(--indigo-dim); border:1px solid var(--indigo-mid);
+  color:var(--indigo-2); font-size:12px; font-weight:600;
+  transition:all 0.2s; cursor:pointer; text-decoration:none;
+}
+.report-btn:hover { background:var(--indigo-mid); color:#fff; transform:translateY(-1px); box-shadow:0 4px 12px var(--indigo-glo); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="history-card">
+  <div class="history-head">
+    <div class="history-title"><span>📊</span> Session History</div>
+  </div>
+  {% if sessions %}
+  <table>
+    <thead>
+      <tr>
+        <th>Exam</th>
+        <th>Date</th>
+        <th>Risk Score</th>
+        <th>Status</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions %}
+      <tr>
+        <td class="td-name">{{ s.exam_name }}</td>
+        <td class="td-mono">{{ s.start_time.strftime('%b %d, %I:%M %p') }}</td>
+        <td>
+          {% set r = s.final_risk_score|default(0) %}
+          {% set c = 'var(--emerald)' if r < 30 else ('var(--amber)' if r < 70 else 'var(--rose)') %}
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="td-mono" style="color:{{c}};font-weight:700">{{ "%.1f"|format(r) }}</span>
+            <div style="width:60px;height:4px;background:var(--glass-b);border-radius:4px;overflow:hidden">
+              <div style="height:100%;width:{{r}}%;background:{{c}}"></div>
+            </div>
+          </div>
+        </td>
+        <td>
+          {% if s.status == 'completed' %}
+            <span class="badge badge-green">Completed</span>
+          {% elif s.status == 'terminated' %}
+            <span class="badge badge-red">Terminated</span>
+          {% else %}
+            <span class="badge badge-amber">Active</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="/exam/{{ s.id }}/result" class="report-btn">View Result →</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state" style="padding:60px; text-align:center;">
+    <div class="empty-icon" style="font-size:48px; opacity:0.3; margin-bottom:16px;">📭</div>
+    <div class="empty-title" style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">No Exams Taken Yet</div>
+    <div class="empty-sub" style="color:var(--text-3);">Your completed exams and risk reports will appear here.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

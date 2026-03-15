@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ProctorX{% if title %} — {{ title }}{% endif %}</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- MAIN THEME -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}?v=5">
+
+{% block extra_head %}{% endblock %}
+
+</head>
+<body class="{% block body_class %}{% endblock %}"></body>
+
+<div class="layout">
+  <!-- ═══════ SIDEBAR ═══════ -->
+  <aside class="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo">🎓</div>
+      <div>
+        <div class="sb-brand-name">ProctorX</div>
+        <div class="sb-brand-tag">// ai exam system</div>
+      </div>
+      <div class="sb-version">v2.0</div>
+    </div>
+
+    <div class="sb-user">
+      <div class="sb-avatar">{{ current_user.username[0].upper() }}</div>
+      <div>
+        <div class="sb-uname">{{ current_user.username }}</div>
+        <div class="sb-urole">student</div>
+      </div>
+      <div class="sb-ustatus">
+        <div class="online-pill">
+          <div class="online-dot"></div>
+          <span class="online-txt">ONLINE</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-nav-section">
+        <div class="sb-nav-label">Main</div>
+        <a href="/student" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+          <span class="nav-icon">⬡</span> Dashboard
+        </a>
+        <a href="/exams" class="nav-item {% if active_page == 'exams' %}active{% endif %}">
+          <span class="nav-icon">📋</span> Exams
+        </a>
+        <a href="/history" class="nav-item {% if active_page == 'history' %}active{% endif %}">
+          <span class="nav-icon">📊</span> History
+        </a>
+      </div>
+      <div class="sb-nav-section">
+        <div class="sb-nav-label">Personal</div>
+        <a href="/profile" class="nav-item {% if active_page == 'profile' %}active{% endif %}">
+          <span class="nav-icon">👤</span> Profile
+        </a>
+        <a href="#" class="nav-item">
+          <span class="nav-icon">📈</span> Analytics
+        </a>
+      </div>
+    </nav>
+
+    <div class="sb-footer">
+      <a href="/logout" class="logout-btn">
+        <span>🚪</span> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <!-- ═══════ MAIN ═══════ -->
+  <main class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-search">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="Search exams, history…">
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-btn notif-btn">
+          🔔
+          <div class="notif-badge"></div>
+        </div>
+        <div class="topbar-btn">⚙️</div>
+        <div class="topbar-greeting">
+          Logged in as <span>{{ current_user.username }}</span>
+        </div>
+      </div>
+    </div>
+
+    {% block content %}
+    {% endblock %}
+  </main>
+</div>
+
+</body>
+</html>

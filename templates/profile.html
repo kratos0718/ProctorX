@@ -1,0 +1,153 @@
+{% extends 'layout_dashboard.html' %}
+{% set active_page = 'profile' %}
+{% set title = 'Profile' %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+.profile-grid {
+  display:grid; grid-template-columns:300px 1fr; gap:24px;
+  margin:20px 32px 32px; animation:fadeUp 0.5s ease both;
+}
+
+/* Left Profile Card */
+.profile-card {
+  background:var(--navy-3); border:1px solid var(--border);
+  border-radius:var(--r-2xl); padding:28px; position:relative; overflow:hidden;
+  box-shadow:0 12px 32px rgba(0,0,0,0.2); align-self:start;
+}
+.profile-card::before {
+  content:''; position:absolute; top:-60px; right:-60px;
+  width:180px; height:180px; border-radius:50%;
+  background:radial-gradient(circle,rgba(99,102,241,0.2),transparent 70%);
+}
+.p-avatar {
+  width:80px; height:80px; border-radius:22px;
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  display:flex; align-items:center; justify-content:center;
+  font-size:32px; font-weight:800; color:#fff;
+  box-shadow:0 8px 24px var(--indigo-glo); margin-bottom:20px;
+  position:relative; z-index:1;
+}
+.p-name { font-size:22px; font-weight:800; color:var(--text); }
+.p-role { font-size:13px; color:var(--indigo-2); font-weight:600; margin-top:2px; }
+.p-id { font-size:12px; font-family:var(--font-m); color:var(--text-3); margin-top:4px; }
+
+.p-divider { height:1px; background:var(--border); margin:24px 0; }
+
+.p-meta { display:flex; flex-direction:column; gap:12px; }
+.p-row { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-2); }
+.p-icon { width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--glass); border-radius:6px; color:var(--text); }
+
+/* Right Academic Cards */
+.acad-grid { display:flex; flex-direction:column; gap:24px; }
+.acad-card {
+  background:var(--navy-3); border:1px solid var(--border);
+  border-radius:var(--r-2xl); padding:28px;
+  box-shadow:0 12px 32px rgba(0,0,0,0.2);
+}
+.acad-title { font-size:16px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:8px; margin-bottom:24px; }
+
+.stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.stat-box {
+  background:var(--glass); border:1px solid var(--border);
+  border-radius:var(--r-xl); padding:20px; transition:all 0.3s;
+}
+.stat-box:hover { background:var(--glass-2); border-color:var(--border-2); transform:translateY(-2px); }
+.sb-val { font-family:var(--font-m); font-size:28px; font-weight:800; color:var(--text); line-height:1; }
+.sb-label { font-size:12px; color:var(--text-3); margin-top:6px; font-weight:500; }
+
+.chart-container { height:260px; position:relative; width:100%; margin-top:20px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-grid">
+  <div class="profile-card">
+    <div class="p-avatar">{{ current_user.username[0].upper() }}</div>
+    <div>
+      <div class="p-name">{{ current_user.username }}</div>
+      <div class="p-role">Computer Science Engineering</div>
+      <div class="p-id">ID: 21BCE{{ current_user.id }}094</div>
+    </div>
+    
+    <div class="p-divider"></div>
+    
+    <div class="p-meta">
+      <div class="p-row"><div class="p-icon">📧</div> {{ current_user.email }}</div>
+      <div class="p-row"><div class="p-icon">🏛️</div> Stanford University</div>
+      <div class="p-row"><div class="p-icon">📅</div> Class of 2026</div>
+    </div>
+  </div>
+
+  <div class="acad-grid">
+    <div class="acad-card">
+      <div class="acad-title"><span>🎓</span> Academic Overview</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="sb-val" style="color:var(--cyan)">3.84</div>
+          <div class="sb-label">Current CGPA</div>
+        </div>
+        <div class="stat-box">
+          <div class="sb-val" style="color:var(--indigo-2)">94</div>
+          <div class="sb-label">Credits Completed</div>
+        </div>
+        <div class="stat-box">
+          <div class="sb-val" style="color:var(--emerald)">18</div>
+          <div class="sb-label">Exams Cleared</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acad-card">
+      <div class="acad-title"><span>📈</span> Performance Analytics</div>
+      <div class="chart-container">
+        <canvas id="cgpaChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ctx = document.getElementById('cgpaChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: ['Sem 1','Sem 2','Sem 3','Sem 4','Sem 5','Sem 6'],
+    datasets: [{
+      label: 'SGPA',
+      data: [3.4, 3.6, 3.75, 3.82, 3.78, 3.9],
+      borderColor: '#22d3ee',
+      backgroundColor: 'rgba(34,211,238,0.1)',
+      borderWidth: 3,
+      tension: 0.4,
+      fill: true,
+      pointBackgroundColor: '#22d3ee',
+      pointBorderColor: '#05070f',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e293b',
+        titleFont: { family: 'Outfit', size: 13 },
+        bodyFont: { family: 'Geist Mono', size: 14, weight: 'bold' },
+        padding: 12,
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1
+      }
+    },
+    scales: {
+      y: { min: 3.0, max: 4.0, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { family: 'Geist Mono' } } },
+      x: { grid: { display: false }, ticks: { color: '#64748b', font: { family: 'Outfit', weight: '500' } } }
+    }
+  }
+});
+</script>
+{% endblock %}
