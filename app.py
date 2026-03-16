@@ -146,6 +146,44 @@ def history_page():
 def profile_page():
     return render_template('profile.html')
 
+@app.route('/profile/data')
+@login_required
+def profile_data():
+    sessions = ExamSession.query.filter_by(user_id=current_user.id)\
+                                .order_by(ExamSession.start_time.asc()).all()
+    completed = [s for s in sessions if s.status == 'completed']
+    scored    = [s for s in completed if s.total_questions]
+    avg_score_pct = round(
+        sum(s.score / s.total_questions * 100 for s in scored) / len(scored), 1
+    ) if scored else 0.0
+    avg_risk = round(
+        sum(s.final_risk_score or 0 for s in completed) / len(completed), 1
+    ) if completed else 0.0
+    total_viols = db.session.query(db.func.count(Violation.id)).join(
+        ExamSession, Violation.session_id == ExamSession.id
+    ).filter(ExamSession.user_id == current_user.id).scalar() or 0
+    integrity = max(0, min(100, round(100 - avg_risk)))
+    # Per-exam score history for chart
+    history = [
+        {'exam': s.exam_name[:22],
+         'score_pct': round(s.score / s.total_questions * 100, 1) if s.total_questions else 0,
+         'risk': round(s.final_risk_score or 0, 1),
+         'date': s.start_time.strftime('%b %d')}
+        for s in completed[-10:]
+    ]
+    return jsonify({
+        'username': current_user.username,
+        'email': current_user.email,
+        'joined': current_user.created_at.strftime('%b %Y'),
+        'total_exams': len(sessions),
+        'completed_exams': len(completed),
+        'avg_score_pct': avg_score_pct,
+        'avg_risk': avg_risk,
+        'integrity': integrity,
+        'total_violations': total_viols,
+        'history': history,
+    })
+
 @app.route('/exam/start/<exam_name>')
 @login_required
 def start_exam(exam_name):
@@ -197,6 +235,9 @@ def submit_exam(session_id):
     exam_session.status = 'completed'
     exam_session.final_risk_score = summary['score']
     exam_session.total_violations = summary['total_violations']
+    exam_session.score = score
+    exam_session.total_questions = len(answers)
+    exam_session.exam_type = 'mcq'
     db.session.commit()
     if 'audio' in ps:
         ps['audio'].stop()
@@ -396,6 +437,9 @@ def code_submit(session_id):
     exam_session.status           = 'completed'
     exam_session.final_risk_score = summary['score']
     exam_session.total_violations = summary['total_violations']
+    exam_session.score            = passed
+    exam_session.total_questions  = len(CODING_QUESTIONS)
+    exam_session.exam_type        = 'coding'
     db.session.commit()
     if 'audio' in ps:
         try: ps['audio'].stop()
@@ -482,6 +526,7 @@ CODING_QUESTIONS = [
 _BROWSER_VTYPES = frozenset([
     'clipboard_access', 'window_focus_lost',
     'rapid_tab_switch', 'multiple_monitor_suspected',
+    'fullscreen_exit',
 ])
 
 @app.route('/browser/violation/<int:session_id>', methods=['POST'])
@@ -649,6 +694,85 @@ def add_question():
     db.session.commit()
     return jsonify({'success': True, 'id': q.id})
 
+@app.route('/admin/delete_question/<int:qid>', methods=['DELETE'])
+@login_required
+def delete_question(qid):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    q = Question.query.get_or_404(qid)
+    db.session.delete(q)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/admin/questions/<path:exam_name>')
+@login_required
+def list_questions(exam_name):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    qs = Question.query.filter_by(exam_name=exam_name).all()
+    return jsonify([{
+        'id': q.id, 'question_text': q.question_text,
+        'option_a': q.option_a, 'option_b': q.option_b,
+        'option_c': q.option_c, 'option_d': q.option_d,
+        'correct_answer': q.correct_answer
+    } for q in qs])
+
+@app.route('/admin/student_stats')
+@login_required
+def student_stats():
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    students = User.query.filter_by(role='student').all()
+    result = []
+    for s in students:
+        sessions = ExamSession.query.filter_by(user_id=s.id).all()
+        completed = [x for x in sessions if x.status == 'completed']
+        avg_score_pct = 0.0
+        if completed:
+            scored = [x for x in completed if x.total_questions]
+            if scored:
+                avg_score_pct = round(
+                    sum(x.score / x.total_questions * 100 for x in scored) / len(scored), 1
+                )
+        avg_risk = round(
+            sum(x.final_risk_score or 0 for x in completed) / len(completed), 1
+        ) if completed else 0.0
+        total_viols = db.session.query(db.func.count(Violation.id)).join(
+            ExamSession, Violation.session_id == ExamSession.id
+        ).filter(ExamSession.user_id == s.id).scalar() or 0
+        result.append({
+            'id': s.id, 'username': s.username, 'email': s.email,
+            'total_exams': len(sessions),
+            'completed_exams': len(completed),
+            'avg_score_pct': avg_score_pct,
+            'avg_risk': avg_risk,
+            'total_violations': total_viols,
+            'joined': s.created_at.strftime('%Y-%m-%d'),
+        })
+    return jsonify(result)
+
+@app.route('/admin/session_detail/<int:session_id>')
+@login_required
+def session_detail(session_id):
+    if current_user.role != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    s = ExamSession.query.get_or_404(session_id)
+    viols = Violation.query.filter_by(session_id=session_id)\
+                           .order_by(Violation.timestamp.desc()).all()
+    return jsonify({
+        'id': s.id, 'exam_name': s.exam_name, 'student': s.student.username,
+        'status': s.status, 'exam_type': s.exam_type or 'mcq',
+        'score': s.score or 0, 'total_questions': s.total_questions or 0,
+        'final_risk_score': round(s.final_risk_score or 0, 1),
+        'total_violations': s.total_violations or 0,
+        'start_time': str(s.start_time)[:19],
+        'end_time': str(s.end_time)[:19] if s.end_time else None,
+        'violations': [{
+            'type': v.violation_type, 'severity': v.severity,
+            'timestamp': str(v.timestamp)[:19], 'details': v.details,
+        } for v in viols[:100]]
+    })
+
 # â”€â”€ SocketIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 @socketio.on('join_admin')
 def on_join_admin():
@@ -669,16 +793,116 @@ def seed_data():
 
     if not Question.query.first():
         sample_qs = [
-            ('Python Basics', 'What is the output of print(2 ** 3)?',
-             '6', '8', '9', '12', 'B'),
-            ('Python Basics', 'Which keyword defines a function in Python?',
-             'func', 'def', 'function', 'define', 'B'),
-            ('Python Basics', 'What does len([1,2,3]) return?',
-             '2', '4', '3', '1', 'C'),
-            ('Python Basics', 'Which data type is mutable?',
-             'tuple', 'string', 'list', 'int', 'C'),
-            ('Python Basics', 'What does // operator do?',
-             'Division', 'Modulo', 'Floor division', 'Power', 'C'),
+            # ── Data Structures & Algorithms ──────────────────────────────
+            ('Data Structures & Algorithms','What is the time complexity of binary search?','O(n)','O(log n)','O(n log n)','O(1)','B'),
+            ('Data Structures & Algorithms','Which data structure uses LIFO order?','Queue','Heap','Stack','Deque','C'),
+            ('Data Structures & Algorithms','What is the worst-case time complexity of QuickSort?','O(n log n)','O(n)','O(n²)','O(log n)','C'),
+            ('Data Structures & Algorithms','In a min-heap, where is the smallest element?','Last leaf','Root','Any leaf','Middle','B'),
+            ('Data Structures & Algorithms','Which traversal visits root AFTER children?','Pre-order','In-order','Post-order','Level-order','C'),
+            ('Data Structures & Algorithms','What is the space complexity of Merge Sort?','O(1)','O(log n)','O(n)','O(n²)','C'),
+            ('Data Structures & Algorithms','Which graph algorithm finds shortest path with non-negative weights?','BFS','DFS','Dijkstra','Bellman-Ford','C'),
+            ('Data Structures & Algorithms','What is a degenerate BST equivalent to?','Heap','Linked list','Hash table','Stack','B'),
+            ('Data Structures & Algorithms','AVL tree maintains balance using what factor?','Height difference ≤ 1','Degree ≤ 2','Color property','Parent pointer','A'),
+            ('Data Structures & Algorithms','What does a hash table use to resolve collisions?','Sorting','Chaining or probing','Balancing','Recursion','B'),
+            # ── Database Management Systems ───────────────────────────────
+            ('Database Management Systems','Which SQL keyword removes duplicate rows from result?','UNIQUE','DISTINCT','FILTER','NODUPE','B'),
+            ('Database Management Systems','What does ACID stand for in DBMS?','Atomicity Consistency Isolation Durability','Abstraction Concurrency Integrity Data','Access Control Index Durability','Aggregation Consistency Index Design','A'),
+            ('Database Management Systems','Which normal form eliminates transitive dependencies?','1NF','2NF','3NF','BCNF','C'),
+            ('Database Management Systems','A foreign key references which key in another table?','Foreign key','Composite key','Primary key','Candidate key','C'),
+            ('Database Management Systems','Which JOIN returns all rows from both tables?','INNER JOIN','LEFT JOIN','RIGHT JOIN','FULL OUTER JOIN','D'),
+            ('Database Management Systems','What is a deadlock in DBMS?','Slow query','Two transactions waiting on each other','Missing index','Corrupt data','B'),
+            ('Database Management Systems','Which command permanently saves a transaction?','ROLLBACK','SAVEPOINT','COMMIT','END','C'),
+            ('Database Management Systems','What does ER stand for in ER diagram?','Entity Relationship','Element Record','Execution Routine','Entry Row','A'),
+            ('Database Management Systems','Which index type is best for range queries?','Hash index','B-tree index','Bitmap index','Full-text index','B'),
+            ('Database Management Systems','What is a view in SQL?','Stored procedure','Virtual table from a SELECT','Trigger','Index','B'),
+            # ── Operating Systems ─────────────────────────────────────────
+            ('Operating Systems','Which scheduling algorithm gives minimum average waiting time for known burst times?','FCFS','Round Robin','SJF','Priority','C'),
+            ('Operating Systems','What is thrashing in OS?','High CPU usage','Excessive paging causing low CPU utilization','Memory leak','Stack overflow','B'),
+            ('Operating Systems','Which of the following is NOT a condition for deadlock?','Mutual exclusion','Hold and wait','Preemption','Circular wait','C'),
+            ('Operating Systems','What does a semaphore value of 0 indicate?','Resource available','Resource unavailable or all copies in use','Error state','Process terminated','B'),
+            ('Operating Systems','Which memory allocation strategy never has external fragmentation?','First fit','Best fit','Paging','Segmentation','C'),
+            ('Operating Systems','What is the purpose of a TLB?','Translate logical to physical addresses quickly','Store page tables','Handle page faults','Manage disk I/O','A'),
+            ('Operating Systems','Which process state means the process is waiting for I/O?','Ready','Running','Blocked','Terminated','C'),
+            ('Operating Systems','What is the critical section problem?','Race condition in shared memory access','Scheduling priority conflict','Memory overflow','Disk failure','A'),
+            ('Operating Systems','UNIX uses which system call to create a new process?','create()','spawn()','fork()','exec()','C'),
+            ('Operating Systems','Which page replacement algorithm suffers from Belady\'s anomaly?','LRU','Optimal','FIFO','Clock','C'),
+            # ── Java Programming ──────────────────────────────────────────
+            ('Java Programming','Which keyword prevents a method from being overridden in Java?','static','abstract','final','private','C'),
+            ('Java Programming','What is the default value of an int array element in Java?','null','1','-1','0','D'),
+            ('Java Programming','Which interface must be implemented to sort objects with Collections.sort()?','Serializable','Runnable','Comparable','Iterable','C'),
+            ('Java Programming','What does JVM stand for?','Java Variable Management','Java Virtual Machine','Java Verified Module','Just-in-time Virtual Manager','B'),
+            ('Java Programming','Which Java keyword is used for exception handling?','error','handle','try','catch-all','C'),
+            ('Java Programming','What is autoboxing in Java?','Converting String to int','Automatic conversion between primitive and wrapper types','Casting objects','Memory boxing','B'),
+            ('Java Programming','Which collection class is synchronized in Java?','ArrayList','HashMap','Vector','LinkedList','C'),
+            ('Java Programming','What is the output of: System.out.println(10/3) in Java?','3.33','3','4','Error','B'),
+            ('Java Programming','Which access modifier makes a member accessible only within the class?','protected','public','default','private','D'),
+            ('Java Programming','What does the "super" keyword refer to?','Current class','Parent class','Static method','Interface','B'),
+            # ── Design & Analysis of Algorithms ──────────────────────────
+            ('Design & Analysis of Algorithms','What technique does dynamic programming use to avoid recomputation?','Recursion','Memoization','Greedy choice','Divide and conquer','B'),
+            ('Design & Analysis of Algorithms','Which algorithm solves the 0/1 knapsack problem optimally?','Greedy','Dynamic programming','BFS','Divide and conquer','B'),
+            ('Design & Analysis of Algorithms','What is the recurrence relation for Merge Sort?','T(n)=T(n-1)+O(1)','T(n)=2T(n/2)+O(n)','T(n)=T(n/2)+O(1)','T(n)=n·T(1)','B'),
+            ('Design & Analysis of Algorithms','Which problem class contains problems solvable in polynomial time?','NP','NP-Hard','P','NP-Complete','C'),
+            ('Design & Analysis of Algorithms','Prim\'s and Kruskal\'s algorithms solve which problem?','Shortest path','Minimum spanning tree','Maximum flow','Topological sort','B'),
+            ('Design & Analysis of Algorithms','What is the greedy choice property?','Local optimum leads to global optimum','All subproblems are solved','Problems have overlapping subproblems','Divide into equal halves','A'),
+            ('Design & Analysis of Algorithms','What does Big-O notation describe?','Best case','Exact running time','Upper bound on growth rate','Lower bound','C'),
+            ('Design & Analysis of Algorithms','Which algorithm uses backtracking to solve N-Queens?','Greedy','Dynamic programming','Branch and bound','Backtracking','D'),
+            ('Design & Analysis of Algorithms','Strassen\'s algorithm improves which operation?','Sorting','Matrix multiplication','Graph traversal','String matching','B'),
+            ('Design & Analysis of Algorithms','A problem is NP-Complete if it is in NP and is:','In P','NP-Hard','Decidable','Polynomial','B'),
+            # ── Python Programming ────────────────────────────────────────
+            ('Python Programming','What is the output of print(type([]))?','<class list>','<class tuple>','<type list>','list','A'),
+            ('Python Programming','Which Python data type is immutable?','list','dict','set','tuple','D'),
+            ('Python Programming','What does the "self" parameter refer to in a class method?','The class itself','The parent class','The current instance','A static reference','C'),
+            ('Python Programming','What is a lambda function in Python?','A named function','An anonymous inline function','A recursive function','A generator','B'),
+            ('Python Programming','What does list comprehension [x**2 for x in range(3)] produce?','[1,4,9]','[0,1,4]','[0,1,2]','[1,2,3]','B'),
+            ('Python Programming','Which module is used for regular expressions in Python?','regex','re','regexp','string','B'),
+            ('Python Programming','What does the "yield" keyword create?','A list','A generator','A coroutine','A thread','B'),
+            ('Python Programming','How do you open a file for reading in Python?','open(f,"w")','open(f)','open(f,"r")','Both B and C','D'),
+            ('Python Programming','What is the output of bool("") in Python?','True','None','Error','False','D'),
+            ('Python Programming','Which decorator makes a method a class method?','@staticmethod','@classmethod','@property','@method','B'),
+            # ── Machine Learning ──────────────────────────────────────────
+            ('Machine Learning','Which algorithm minimizes cost function using gradient steps?','Random Forest','Gradient Descent','K-Means','SVM','B'),
+            ('Machine Learning','What does overfitting mean?','Model too simple','Model performs well on train but poorly on test','Low training error and low test error','Model fails to converge','B'),
+            ('Machine Learning','Which metric is best for imbalanced classification?','Accuracy','MSE','F1-Score','R-Squared','C'),
+            ('Machine Learning','What does the kernel trick do in SVM?','Reduces dimensions','Maps data to higher dimension implicitly','Prunes decision tree','Normalizes data','B'),
+            ('Machine Learning','What is the role of the activation function in a neural network?','Initialize weights','Introduce non-linearity','Normalize inputs','Compute loss','B'),
+            ('Machine Learning','Which technique reduces overfitting by randomly dropping neurons?','Batch normalization','Dropout','Data augmentation','Early stopping','B'),
+            ('Machine Learning','In k-fold cross-validation, the dataset is split into how many folds?','2','n (samples)','k','k+1','C'),
+            ('Machine Learning','Principal Component Analysis (PCA) is used for?','Classification','Clustering','Dimensionality reduction','Regression','C'),
+            ('Machine Learning','Which loss function is used for binary classification?','MSE','Cross-entropy','Hinge loss','MAE','B'),
+            ('Machine Learning','What does a confusion matrix show?','Feature importance','Predicted vs actual class counts','Loss curve','Learning rate','B'),
+            # ── Artificial Intelligence ───────────────────────────────────
+            ('Artificial Intelligence','Which search algorithm uses a heuristic to guide exploration?','BFS','DFS','A*','Uniform Cost Search','C'),
+            ('Artificial Intelligence','What is the Turing Test designed to measure?','Processing speed','Machine intelligence via conversation','Memory capacity','Algorithm efficiency','B'),
+            ('Artificial Intelligence','Which logic type handles uncertain knowledge?','Propositional logic','First-order logic','Fuzzy logic','Temporal logic','C'),
+            ('Artificial Intelligence','What is a knowledge base in an expert system?','Database of rules and facts','Training dataset','Neural network','Decision tree','A'),
+            ('Artificial Intelligence','Which technique is used in game-playing AI like chess?','A* Search','Minimax with Alpha-Beta pruning','Genetic algorithm','Hidden Markov model','B'),
+            ('Artificial Intelligence','What does NLP stand for?','Neural Learning Process','Natural Language Processing','Network Layer Protocol','Non-Linear Programming','B'),
+            ('Artificial Intelligence','A Bayesian network represents what?','Decision tree','Probabilistic dependencies between variables','Recurrent neural layers','Rule-based system','B'),
+            ('Artificial Intelligence','Which algorithm is used for constraint satisfaction problems?','Backtracking search','Minimax','Gradient descent','Value iteration','A'),
+            ('Artificial Intelligence','What is reinforcement learning\'s reward signal used for?','Labeling data','Guiding agent behavior toward goal','Initializing weights','Pruning search tree','B'),
+            ('Artificial Intelligence','STRIPS is a language for?','Natural language parsing','Automated planning','Image recognition','Cryptography','B'),
+            # ── Computer Networks ─────────────────────────────────────────
+            ('Computer Networks','How many layers does the OSI model have?','4','5','7','8','C'),
+            ('Computer Networks','Which protocol assigns IP addresses automatically?','DNS','FTP','DHCP','ARP','C'),
+            ('Computer Networks','What does TCP guarantee that UDP does not?','Speed','Reliability and ordering','Encryption','Low latency','B'),
+            ('Computer Networks','Which layer is responsible for routing packets?','Data Link','Transport','Network','Session','C'),
+            ('Computer Networks','What is the purpose of ARP?','Resolve domain name to IP','Resolve IP address to MAC address','Encrypt packets','Assign ports','B'),
+            ('Computer Networks','Which device operates at Layer 2 of the OSI model?','Router','Switch','Hub','Gateway','B'),
+            ('Computer Networks','What is the subnet mask for a /24 network?','255.255.0.0','255.0.0.0','255.255.255.0','255.255.255.128','C'),
+            ('Computer Networks','Which port does HTTPS use by default?','80','21','443','8080','C'),
+            ('Computer Networks','What is the three-way handshake in TCP?','SYN → SYN-ACK → ACK','ACK → SYN → FIN','SYN → ACK → FIN','HELLO → READY → GO','A'),
+            ('Computer Networks','Which protocol is used for sending email?','IMAP','POP3','SMTP','FTP','C'),
+            # ── Software Engineering ──────────────────────────────────────
+            ('Software Engineering','Which SDLC model is iterative and incremental?','Waterfall','V-Model','Agile','Big Bang','C'),
+            ('Software Engineering','What does SOLID stand for in OOP design?','5 design principles for maintainable code','Structured Object Layered Interface Design','Server Object Linked Integration Design','Scalable Open Linked Interface Domain','A'),
+            ('Software Engineering','Which testing technique tests without knowledge of internal code?','White-box','Grey-box','Black-box','Structural','C'),
+            ('Software Engineering','What is the purpose of a design pattern?','Writing fastest code','Reusable solution to common design problem','Defining database schema','Testing methodology','B'),
+            ('Software Engineering','Which version control system is distributed?','SVN','CVS','Git','Perforce','C'),
+            ('Software Engineering','What does CI/CD stand for?','Code Integration / Code Deployment','Continuous Integration / Continuous Deployment','Component Interface / Component Design','Compiled Input / Computed Data','B'),
+            ('Software Engineering','Which Agile ceremony estimates story points?','Daily standup','Sprint review','Planning poker','Retrospective','C'),
+            ('Software Engineering','A use case diagram belongs to which modeling language?','BPMN','ER notation','UML','Flowchart','C'),
+            ('Software Engineering','What is the purpose of code refactoring?','Add new features','Fix critical bugs','Improve code structure without changing behavior','Increase performance only','C'),
+            ('Software Engineering','Which metric measures the number of independent paths through code?','LOC','Cyclomatic complexity','Coupling','Cohesion','B'),
         ]
         for qdata in sample_qs:
             q = Question(exam_name=qdata[0], question_text=qdata[1],

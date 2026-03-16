@@ -28,6 +28,22 @@ a{text-decoration:none;color:inherit;}
 #scanlines{position:fixed;inset:0;pointer-events:none;z-index:9000;
   background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.025) 2px,rgba(0,0,0,.025) 4px);}
 
+/* FULLSCREEN EXIT OVERLAY */
+#fs-overlay{
+  position:fixed;inset:0;z-index:99999;
+  background:rgba(12,10,13,.95);backdrop-filter:blur(20px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  opacity:0;pointer-events:none;transition:opacity .3s;}
+#fs-overlay.show{opacity:1;pointer-events:all;}
+.fs-icon{font-size:64px;animation:pulse 1.5s infinite;}
+.fs-title{font-size:26px;font-weight:800;color:var(--red);}
+.fs-sub{font-size:14px;color:var(--t3);text-align:center;max-width:420px;line-height:1.6;}
+.fs-btn{margin-top:8px;padding:12px 36px;background:var(--grad);color:#fff;
+  font-size:14px;font-weight:700;border-radius:12px;cursor:pointer;border:none;
+  font-family:var(--f);box-shadow:0 4px 20px var(--b-glow);transition:transform .15s,opacity .15s;}
+.fs-btn:hover{transform:translateY(-2px);opacity:.9;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.12);}}
+
 /* TAB WARNING */
 #tab-warning{
   position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-100%);
@@ -458,6 +474,12 @@ kbd{background:var(--bg3);border:1px solid var(--bdr2);border-radius:3px;padding
   <a href="/dashboard" class="to-link">← Return to Dashboard</a>
 </div>
 
+<div id="fs-overlay">
+  <div class="fs-icon">⛶</div>
+  <div class="fs-title">Fullscreen Required</div>
+  <div class="fs-sub">You exited fullscreen mode. This has been recorded as a violation. Click below to return to the exam.</div>
+  <button class="fs-btn" onclick="reEnterFs()">↩ Return to Fullscreen</button>
+</div>
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>

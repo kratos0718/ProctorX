@@ -32,4 +32,5 @@ class Config:
         'window_focus_lost': 10,
         'rapid_tab_switch': 15,
         'multiple_monitor_suspected': 20,
+        'fullscreen_exit': 20,
     }

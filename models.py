@@ -24,6 +24,9 @@ class ExamSession(db.Model):
     status = db.Column(db.String(20), default='active')
     final_risk_score = db.Column(db.Float, default=0.0)
     total_violations = db.Column(db.Integer, default=0)
+    score = db.Column(db.Integer, default=0)
+    total_questions = db.Column(db.Integer, default=0)
+    exam_type = db.Column(db.String(20), default='mcq')  # 'mcq' or 'coding'
     violations = db.relationship('Violation', backref='session', lazy=True)
 
 class Violation(db.Model):

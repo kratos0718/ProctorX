@@ -354,6 +354,59 @@ function addViol(sev, icon, msg) {
 }
 
 /* ════════════════════════════════════════
+   FULLSCREEN LOCK
+════════════════════════════════════════ */
+var _fsWarned = false;
+var _fsViolCount = 0;
+
+function enterFullscreen() {
+  var el = document.documentElement;
+  var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+  if (fn) fn.call(el).catch(function() { /* user denied — handled by event */ });
+}
+
+function exitFullscreenFn() {
+  return document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+}
+
+function isFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+}
+
+/* Overlay shown when student exits fullscreen */
+function showFsWarning() {
+  var ov = document.getElementById('fs-overlay');
+  if (ov) ov.classList.add('show');
+}
+function hideFsWarning() {
+  var ov = document.getElementById('fs-overlay');
+  if (ov) ov.classList.remove('show');
+}
+
+document.addEventListener('fullscreenchange',     _onFsChange);
+document.addEventListener('webkitfullscreenchange', _onFsChange);
+document.addEventListener('mozfullscreenchange',  _onFsChange);
+document.addEventListener('MSFullscreenChange',   _onFsChange);
+
+function _onFsChange() {
+  if (!isFullscreen()) {
+    _fsViolCount++;
+    addViol('high', '⛶', 'Fullscreen exited — violation #' + _fsViolCount);
+    sendBrowserViolation('fullscreen_exit',
+      'Student exited fullscreen (event #' + _fsViolCount + ')');
+    showFsWarning();
+  } else {
+    hideFsWarning();
+  }
+}
+
+/* Re-enter fullscreen button (inside overlay) */
+function reEnterFs() {
+  hideFsWarning();
+  enterFullscreen();
+}
+
+/* ════════════════════════════════════════
    TAB / VISIBILITY
 ════════════════════════════════════════ */
 document.addEventListener('visibilitychange', function() {
@@ -429,6 +482,8 @@ document.addEventListener('DOMContentLoaded', function() {
     addViol('medium', '🖥️',
       'Multiple monitors suspected (' + window.screen.availWidth + 'px available)');
   }
+  /* Auto-enter fullscreen when exam loads */
+  enterFullscreen();
 });
 
 /* ════════════════════════════════════════

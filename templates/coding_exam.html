@@ -37,6 +37,20 @@ button{font-family:var(--f);cursor:pointer;border:none;background:none;}
   color:var(--red);z-index:9999;transition:transform .4s cubic-bezier(.34,1.56,.64,1);
   display:flex;align-items:center;gap:8px;box-shadow:0 4px 28px rgba(248,113,113,.25);}
 #tab-warning.show{transform:translateX(-50%) translateY(0);}
+#fs-overlay{
+  position:fixed;inset:0;z-index:99999;
+  background:rgba(12,10,13,.96);backdrop-filter:blur(20px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  opacity:0;pointer-events:none;transition:opacity .3s;}
+#fs-overlay.show{opacity:1;pointer-events:all;}
+#fs-overlay .fs-icon{font-size:64px;animation:fsPulse 1.5s infinite;}
+#fs-overlay .fs-title{font-size:26px;font-weight:800;color:var(--red);}
+#fs-overlay .fs-sub{font-size:14px;color:var(--t3);text-align:center;max-width:400px;line-height:1.6;}
+#fs-overlay .fs-btn{padding:12px 36px;background:linear-gradient(135deg,var(--rose),var(--mint));
+  color:#fff;font-size:14px;font-weight:700;border-radius:12px;cursor:pointer;border:none;
+  font-family:var(--f);box-shadow:0 4px 20px rgba(244,63,94,.35);transition:transform .15s;}
+#fs-overlay .fs-btn:hover{transform:translateY(-2px);}
+@keyframes fsPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
 
 /* ─ SHELL ─ */
 #shell{display:grid;grid-template-rows:54px 1fr 52px;grid-template-columns:170px 1fr 272px;height:100vh;overflow:hidden;position:relative;z-index:1;}
@@ -405,6 +419,12 @@ kbd{background:var(--bg3);border:1px solid var(--bdr2);border-radius:3px;padding
   <div class="to-title">Exam Terminated</div>
   <div class="to-msg">Your session was ended by the administrator.</div>
   <a href="/dashboard" class="to-link">← Return to Dashboard</a>
+</div>
+<div id="fs-overlay">
+  <div class="fs-icon">⛶</div>
+  <div class="fs-title">Fullscreen Required</div>
+  <div class="fs-sub">You exited fullscreen. This violation has been recorded. Return to continue your exam.</div>
+  <button class="fs-btn" onclick="reEnterFs()">↩ Return to Fullscreen</button>
 </div>
 <div id="toast"></div>
 
@@ -850,6 +870,32 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),3000);
 }
 
+/* ── FULLSCREEN LOCK ── */
+var _fsViolCount=0;
+function enterFullscreen(){
+  var el=document.documentElement;
+  var fn=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen;
+  if(fn) fn.call(el).catch(function(){});
+}
+function isFullscreen(){
+  return !!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement||document.msFullscreenElement);
+}
+function showFsWarning(){var o=document.getElementById('fs-overlay');if(o)o.classList.add('show');}
+function hideFsWarning(){var o=document.getElementById('fs-overlay');if(o)o.classList.remove('show');}
+function reEnterFs(){hideFsWarning();enterFullscreen();}
+['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange'].forEach(function(e){
+  document.addEventListener(e,function(){
+    if(!isFullscreen()){
+      _fsViolCount++;
+      addViol('high','⛶','Fullscreen exited — violation #'+_fsViolCount);
+      fetch('/browser/violation/'+SESSION_ID,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({violation_type:'fullscreen_exit',details:'Fullscreen exited (event #'+_fsViolCount+')',timestamp:new Date().toISOString()})
+      }).catch(function(){});
+      showFsWarning();
+    } else { hideFsWarning(); }
+  });
+});
+
 /* ── TAB / VISIBILITY ── */
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){
@@ -872,6 +918,7 @@ socket.on('session_terminated',function(d){
 
 /* ── INIT ── */
 document.addEventListener('DOMContentLoaded',function(){
+  enterFullscreen();
   startCam();
 });
 </script>
