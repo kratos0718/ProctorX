@@ -930,9 +930,25 @@ def seed_data():
     db.session.commit()
 
 # â”€â”€ Run â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+def migrate_db():
+    """Add any missing columns to existing tables (safe to run every startup)."""
+    with db.engine.connect() as conn:
+        # exam_sessions new columns
+        for col, typedef in [
+            ('score',           'INTEGER DEFAULT 0'),
+            ('total_questions', 'INTEGER DEFAULT 0'),
+            ('exam_type',       "VARCHAR(20) DEFAULT 'mcq'"),
+        ]:
+            try:
+                conn.execute(db.text(f'ALTER TABLE exam_sessions ADD COLUMN {col} {typedef}'))
+                conn.commit()
+            except Exception:
+                pass  # column already exists
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        migrate_db()
         seed_data()
     socketio.run(
         app,
