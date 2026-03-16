@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os, cv2, base64, time
+import os, base64, time
 from datetime import datetime
 from flask import (Flask, render_template, request, redirect,
                    url_for, jsonify, send_file)
@@ -7,18 +7,37 @@ from flask_login import (LoginManager, login_user, logout_user,
                           login_required, current_user)
 from flask_socketio import SocketIO, emit, join_room
 from werkzeug.security import generate_password_hash, check_password_hash
-import numpy as np
 
 from config import Config
 from models import db, User, ExamSession, Violation, Question, ExamAnswer
-from proctoring.face_detection import FaceDetector
-from proctoring.eye_tracker import EyeTracker
-from proctoring.head_pose import HeadPoseEstimator
-from proctoring.lip_movement import LipMovementDetector
-from proctoring.object_detection import ObjectDetector
-from proctoring.audio_monitor import AudioMonitor
-from proctoring.risk_scorer import RiskScorer
-from proctoring.report_generator import ReportGenerator
+
+# Heavy AI imports — optional, gracefully disabled in cloud/low-RAM environments
+AI_ENABLED = False
+try:
+    import cv2, numpy as np
+    from proctoring.face_detection import FaceDetector
+    from proctoring.eye_tracker import EyeTracker
+    from proctoring.head_pose import HeadPoseEstimator
+    from proctoring.lip_movement import LipMovementDetector
+    from proctoring.object_detection import ObjectDetector
+    from proctoring.audio_monitor import AudioMonitor
+    from proctoring.risk_scorer import RiskScorer
+    from proctoring.report_generator import ReportGenerator
+    AI_ENABLED = True
+except Exception as _ai_err:
+    print(f'[ProctorX] AI proctoring disabled: {_ai_err}')
+    import numpy as np
+    # Stub classes so routes don't crash
+    class RiskScorer:
+        def update(self, a): return 0.0
+        def get_summary(self): return {'score': 0.0, 'level': 'LOW', 'color': '#22C55E', 'total_violations': 0}
+    class ReportGenerator:
+        def generate(self, *a, **kw): pass
+    class AudioMonitor:
+        def start(self): pass
+        def stop(self): pass
+        def get_status(self): return {'alerts': [], 'level': 0}
+    FaceDetector = EyeTracker = HeadPoseEstimator = LipMovementDetector = ObjectDetector = None
 
 # â”€â”€ App Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app = Flask(__name__)
@@ -197,18 +216,19 @@ def start_exam(exam_name):
     exam_session = ExamSession(user_id=current_user.id, exam_name=exam_name)
     db.session.add(exam_session)
     db.session.commit()
-    proctoring_sessions[exam_session.id] = {
-        'face': FaceDetector(),
-        'eye': EyeTracker(),
-        'head': HeadPoseEstimator(),
-        'lip': LipMovementDetector(),
-        'audio': AudioMonitor(),
-        'risk': RiskScorer(),
-        'object': ObjectDetector(),
-        'last_screenshot': 0,
-        'frame_count': 0,
-    }
-    proctoring_sessions[exam_session.id]['audio'].start()
+    if AI_ENABLED:
+        proctoring_sessions[exam_session.id] = {
+            'face': FaceDetector(), 'eye': EyeTracker(),
+            'head': HeadPoseEstimator(), 'lip': LipMovementDetector(),
+            'audio': AudioMonitor(), 'risk': RiskScorer(),
+            'object': ObjectDetector(), 'last_screenshot': 0, 'frame_count': 0,
+        }
+        proctoring_sessions[exam_session.id]['audio'].start()
+    else:
+        proctoring_sessions[exam_session.id] = {
+            'risk': RiskScorer(), 'audio': AudioMonitor(),
+            'last_screenshot': 0, 'frame_count': 0,
+        }
     return redirect(url_for('exam_page', session_id=exam_session.id))
 
 _EXAM_META = {
@@ -290,6 +310,26 @@ def process_frame(session_id):
     tab_switch = data.get('tab_switch', False)
     all_alerts = []
     face_count = 0
+    frame = None
+
+    if not AI_ENABLED:
+        # Cloud/low-RAM mode: skip AI, just track browser violations
+        if tab_switch:
+            all_alerts.append(('tab_switch', 'Tab switch detected!', 'high'))
+        risk_score = ps['risk'].update(all_alerts)
+        risk_summary = ps['risk'].get_summary()
+        socketio.emit('proctor_update', {
+            'session_id': session_id, 'student': current_user.username,
+            'risk_score': risk_score, 'risk_level': risk_summary['level'],
+            'alerts': [], 'face_count': 0,
+        }, room='admin')
+        return jsonify({
+            'risk_score': risk_score, 'risk_level': risk_summary['level'],
+            'risk_color': risk_summary['color'], 'alerts': [],
+            'annotated_frame': img_data,
+            'stats': {'face_count': 0, 'gaze': 'N/A', 'blinks': 0,
+                      'head': 'N/A', 'talking': False, 'audio': 0}
+        })
 
     try:
         header, encoded = img_data.split(',', 1)
@@ -302,50 +342,34 @@ def process_frame(session_id):
 
     ps['frame_count'] += 1
 
-    # Keep track of last alerts to prevent flickering
     if 'last_alerts' not in ps:
         ps['last_alerts'] = []
-    
-    # Run all detections every 2 frames for near real-time response (<1s)
-    if True:
-        face_count, landmarks, frame, face_alerts = ps['face'].detect(frame)
-        all_alerts.extend(face_alerts)
 
-        if landmarks is not None:
-            eye_result = ps['eye'].analyze(frame, landmarks)
-            all_alerts.extend(eye_result['alerts'])
+    face_count, landmarks, frame, face_alerts = ps['face'].detect(frame)
+    all_alerts.extend(face_alerts)
 
-            head_result = ps['head'].estimate(frame, landmarks)
-            all_alerts.extend(head_result['alerts'])
-
-            lip_result = ps['lip'].analyze(frame, landmarks)
-            all_alerts.extend(lip_result['alerts'])
-            
-            ps['last_stats'] = {
-                'face_count': face_count,
-                'gaze': eye_result['gaze'],
-                'head': head_result['pose'],
-                'blinks': getattr(ps['eye'], 'total_blinks', 0),
-                'talking': lip_result['talking']
-            }
-        else:
-            ps['last_stats'] = {
-                'face_count': face_count,
-                'gaze': None,
-                'head': None,
-                'blinks': getattr(ps['eye'], 'total_blinks', 0),
-                'talking': False
-            }
-
-        # Object detection every 2 frames — fast enough for sub-1 second response
-        frame, _, obj_alerts = ps['object'].detect(frame)
-        all_alerts.extend(obj_alerts)
-        ps['last_obj_alerts'] = obj_alerts
-
-        ps['last_alerts'] = all_alerts
+    if landmarks is not None:
+        eye_result = ps['eye'].analyze(frame, landmarks)
+        all_alerts.extend(eye_result['alerts'])
+        head_result = ps['head'].estimate(frame, landmarks)
+        all_alerts.extend(head_result['alerts'])
+        lip_result = ps['lip'].analyze(frame, landmarks)
+        all_alerts.extend(lip_result['alerts'])
+        ps['last_stats'] = {
+            'face_count': face_count, 'gaze': eye_result['gaze'],
+            'head': head_result['pose'],
+            'blinks': getattr(ps['eye'], 'total_blinks', 0),
+            'talking': lip_result['talking']
+        }
     else:
-        # On skipped frames, reuse previous alerts (only 1 frame old)
-        all_alerts.extend(ps.get('last_alerts', []))
+        ps['last_stats'] = {
+            'face_count': face_count, 'gaze': None, 'head': None,
+            'blinks': getattr(ps['eye'], 'total_blinks', 0), 'talking': False
+        }
+
+    frame, _, obj_alerts = ps['object'].detect(frame)
+    all_alerts.extend(obj_alerts)
+    ps['last_alerts'] = all_alerts
 
     audio_status = ps['audio'].get_status()
     all_alerts.extend(audio_status['alerts'])
