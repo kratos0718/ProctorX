@@ -33,6 +33,13 @@ login_manager.login_view = 'login'
 
 proctoring_sessions = {}
 
+# Run DB init when started by gunicorn (Render/Railway) — not just __main__
+with app.app_context():
+    try:
+        db.create_all()
+    except Exception:
+        pass
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -958,6 +965,10 @@ if __name__ == '__main__':
         allow_unsafe_werkzeug=True,
         use_reloader=False
     )
+@app.route('/health')
+def health():
+    return 'ok', 200
+
 @app.route('/test')
 def test():
     return "<h1 style='color:red'>TEST PAGE</h1>"
