@@ -204,14 +204,30 @@ def start_exam(exam_name):
     proctoring_sessions[exam_session.id]['audio'].start()
     return redirect(url_for('exam_page', session_id=exam_session.id))
 
+_EXAM_META = {
+    'Data Structures & Algorithms':    {'dur': 45, 'diff': 'Hard'},
+    'Database Management Systems':     {'dur': 40, 'diff': 'Medium'},
+    'Operating Systems':               {'dur': 50, 'diff': 'Hard'},
+    'Java Programming':                {'dur': 45, 'diff': 'Medium'},
+    'Design & Analysis of Algorithms': {'dur': 60, 'diff': 'Hard'},
+    'Python Programming':              {'dur': 30, 'diff': 'Easy'},
+    'Machine Learning':                {'dur': 60, 'diff': 'Hard'},
+    'Artificial Intelligence':         {'dur': 45, 'diff': 'Medium'},
+    'Computer Networks':               {'dur': 40, 'diff': 'Medium'},
+    'Software Engineering':            {'dur': 30, 'diff': 'Easy'},
+}
+
 @app.route('/exam/<int:session_id>')
 @login_required
 def exam_page(session_id):
     exam_session = ExamSession.query.get_or_404(session_id)
     if exam_session.user_id != current_user.id:
-        return redirect(url_for('student_home'))
+        return redirect(url_for('dashboard'))
     questions = Question.query.filter_by(exam_name=exam_session.exam_name).all()
-    return render_template('exam.html', session=exam_session, questions=questions)
+    meta = _EXAM_META.get(exam_session.exam_name, {'dur': 45, 'diff': 'Medium'})
+    return render_template('exam.html', session=exam_session,
+                           questions=questions, duration=meta['dur'],
+                           difficulty=meta['diff'])
 
 @app.route('/exam/<int:session_id>/submit', methods=['POST'])
 @login_required

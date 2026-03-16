@@ -173,9 +173,10 @@ table.dt tr:hover td{background:var(--glass);}
       </div>
     </div>
     <div class="nav-section">MONITOR</div>
-    <a href="#live"    class="nav-item active"><span class="nav-icon">📡</span> Live Sessions</a>
-    <a href="#reports" class="nav-item"><span class="nav-icon">📊</span> Reports</a>
-    <a href="#addq"    class="nav-item"><span class="nav-icon">➕</span> Add Questions</a>
+    <a href="#live"     class="nav-item active"><span class="nav-icon">📡</span> Live Sessions</a>
+    <a href="#students" class="nav-item"><span class="nav-icon">👥</span> Students</a>
+    <a href="#reports"  class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+    <a href="#addq"     class="nav-item"><span class="nav-icon">➕</span> Add Questions</a>
     <div class="sb-spacer"></div>
     <div class="sb-user">
       <div class="sb-avatar">{{ current_user.username[0].upper() }}</div>
@@ -286,6 +287,18 @@ table.dt tr:hover td{background:var(--glass);}
         </div>
       </div>
 
+      <!-- Students -->
+      <div class="section-hdr fade-up fade-up-2" id="students" style="margin-top:8px">
+        <div class="section-title">Student Performance</div>
+        <button class="btn-primary" style="font-size:12px;padding:7px 14px" onclick="loadStudents()">↻ Refresh</button>
+      </div>
+      <div class="panel fade-up fade-up-2" id="students-panel">
+        <div class="panel-hdr"><span class="panel-title">All Students</span></div>
+        <div class="table-wrap" id="students-table-wrap">
+          <div class="empty-state"><div class="empty-icon">👥</div><div class="empty-txt">Click Refresh to load stats</div></div>
+        </div>
+      </div>
+
       <!-- Add Question -->
       <div class="section-hdr fade-up fade-up-2" id="addq" style="margin-top:8px">
         <div class="section-title">Add Question</div>
@@ -351,26 +364,45 @@ table.dt tr:hover td{background:var(--glass);}
           <table class="dt">
             <thead>
               <tr>
-                <th>STUDENT</th><th>EXAM</th><th>DATE</th>
-                <th>RISK</th><th>VIOLATIONS</th><th>REPORT</th>
+                <th>STUDENT</th><th>EXAM</th><th>TYPE</th><th>DATE</th>
+                <th>SCORE</th><th>RISK</th><th>VIOLATIONS</th><th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               {% for s in completed_sessions %}
+              {% set r = s.final_risk_score or 0 %}
+              {% set score_pct = ((s.score / s.total_questions * 100)|round|int) if s.total_questions else 0 %}
               <tr>
                 <td>
                   <span class="dt-av">{{ s.student.username[0].upper() }}</span>
                   <span style="font-weight:600;color:var(--t1)">{{ s.student.username }}</span>
                 </td>
-                <td style="color:var(--t3)">{{ s.exam_name }}</td>
-                <td style="font-family:var(--fm);font-size:11px;color:var(--t4)">{{ s.start_time.strftime('%b %d, %Y %H:%M') }}</td>
+                <td style="color:var(--t3);font-size:12px">{{ s.exam_name }}</td>
                 <td>
-                  {% set r = s.final_risk_score or 0 %}
-                  <span class="badge {% if r < 30 %}badge-green{% elif r < 60 %}badge-amber{% else %}badge-red{% endif %}"
-                        style="font-family:var(--fm)">{{ r }}</span>
+                  {% if s.exam_type == 'coding' %}
+                    <span class="badge badge-cyan">💻 Coding</span>
+                  {% else %}
+                    <span class="badge badge-blue">📝 MCQ</span>
+                  {% endif %}
                 </td>
-                <td><span class="badge badge-red">{{ s.violations|length }}</span></td>
-                <td><a href="/report/{{ s.id }}" class="report-link">📄 PDF</a></td>
+                <td style="font-family:var(--fm);font-size:11px;color:var(--t4)">{{ s.start_time.strftime('%b %d %H:%M') }}</td>
+                <td>
+                  {% if s.total_questions %}
+                    <span class="badge {% if score_pct >= 70 %}badge-green{% elif score_pct >= 40 %}badge-amber{% else %}badge-red{% endif %}"
+                          style="font-family:var(--fm)">{{ score_pct }}%</span>
+                  {% else %}
+                    <span style="color:var(--t4)">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge {% if r < 30 %}badge-green{% elif r < 60 %}badge-amber{% else %}badge-red{% endif %}"
+                        style="font-family:var(--fm)">{{ "%.0f"|format(r) }}</span>
+                </td>
+                <td><span class="badge {% if s.violations|length == 0 %}badge-green{% else %}badge-red{% endif %}">{{ s.violations|length }}</span></td>
+                <td style="display:flex;gap:6px">
+                  <a href="/exam/{{ s.id }}/result" class="report-link">👁 View</a>
+                  <a href="/report/{{ s.id }}" class="report-link">📄 PDF</a>
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -446,6 +478,36 @@ document.getElementById('add-q-form').addEventListener('submit', async e => {
     else           { showToast('Failed: ' + (d.error || 'Error'), 'error'); }
   } catch(err) { showToast('Request failed', 'error'); }
 });
+
+async function loadStudents() {
+  const wrap = document.getElementById('students-table-wrap');
+  wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-txt">Loading...</div></div>';
+  try {
+    const data = await fetch('/admin/student_stats').then(r => r.json());
+    if (!data.length) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-txt">No students registered</div></div>';
+      return;
+    }
+    let rows = data.map(s => {
+      const riskBadge = s.avg_risk < 30 ? 'badge-green' : s.avg_risk < 60 ? 'badge-amber' : 'badge-red';
+      const scoreBadge = s.avg_score_pct >= 70 ? 'badge-green' : s.avg_score_pct >= 40 ? 'badge-amber' : 'badge-red';
+      return `<tr>
+        <td><span class="dt-av">${s.username[0].toUpperCase()}</span><span style="font-weight:600;color:var(--t1)">${s.username}</span></td>
+        <td style="font-size:12px;color:var(--t4);font-family:var(--fm)">${s.email}</td>
+        <td><span class="badge badge-blue" style="font-family:var(--fm)">${s.total_exams}</span></td>
+        <td><span class="badge badge-cyan" style="font-family:var(--fm)">${s.completed_exams}</span></td>
+        <td><span class="badge ${scoreBadge}" style="font-family:var(--fm)">${s.avg_score_pct}%</span></td>
+        <td><span class="badge ${riskBadge}" style="font-family:var(--fm)">${s.avg_risk}</span></td>
+        <td><span class="badge ${s.total_violations > 0 ? 'badge-red':'badge-green'}" style="font-family:var(--fm)">${s.total_violations}</span></td>
+        <td style="font-family:var(--fm);font-size:11px;color:var(--t4)">${s.joined}</td>
+      </tr>`;
+    }).join('');
+    wrap.innerHTML = `<table class="dt"><thead><tr>
+      <th>STUDENT</th><th>EMAIL</th><th>EXAMS</th><th>DONE</th>
+      <th>AVG SCORE</th><th>AVG RISK</th><th>VIOLATIONS</th><th>JOINED</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+  } catch(e) { showToast('Failed to load students', 'error'); }
+}
 
 function showToast(msg, type = 'success') {
   const t  = document.getElementById('toast');

@@ -4,88 +4,154 @@
 
 {% block extra_head %}
 <style>
-.history-card {
-  background:var(--navy-3); border:1px solid var(--border);
-  border-radius:var(--r-2xl); overflow:hidden; margin:20px 32px 32px;
-  animation:fadeUp 0.5s ease both;
-  box-shadow:0 12px 32px rgba(0,0,0,0.2);
-}
-.history-head {
-  padding:20px 24px; border-bottom:1px solid var(--border);
-  display:flex; align-items:center; justify-content:space-between;
-  background:var(--glass);
-}
-.history-title { font-size:18px; font-weight:700; color:var(--text); display:flex; align-items:center; gap:10px; }
-table { width:100%; border-collapse:collapse; font-size:13px; }
-th { text-align:left; padding:14px 24px; color:var(--text-3); font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; font-family:var(--font-m); border-bottom:1px solid var(--border); background:rgba(0,0,0,0.2); }
-td { padding:16px 24px; border-bottom:1px solid rgba(255,255,255,0.03); color:var(--text-2); transition:background 0.2s; }
-tr:last-child td { border-bottom:none; }
-tr:hover td { background:var(--glass-2); cursor:default; }
-.td-name { color:var(--text); font-weight:600; font-size:14px; }
-.td-mono { font-family:var(--font-m); font-size:13px; }
-.report-btn {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:7px 14px; border-radius:var(--r-md);
-  background:var(--indigo-dim); border:1px solid var(--indigo-mid);
-  color:var(--indigo-2); font-size:12px; font-weight:600;
-  transition:all 0.2s; cursor:pointer; text-decoration:none;
-}
-.report-btn:hover { background:var(--indigo-mid); color:#fff; transform:translateY(-1px); box-shadow:0 4px 12px var(--indigo-glo); }
+.hist-wrap{margin:20px 32px 32px;animation:fadeUp .5s ease both;}
+.hist-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.hist-title{font-size:18px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:10px;}
+.hist-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.hs-card{background:var(--navy-3);border:1px solid var(--border);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;}
+.hs-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.hs-card.c1::before{background:linear-gradient(90deg,#F43F5E,#2DD4BF);}
+.hs-card.c2::before{background:linear-gradient(90deg,#2DD4BF,#22C55E);}
+.hs-card.c3::before{background:linear-gradient(90deg,#EAB308,#FB923C);}
+.hs-card.c4::before{background:linear-gradient(90deg,#F87171,#F43F5E);}
+.hs-val{font-family:var(--font-m);font-size:26px;font-weight:800;color:var(--text);line-height:1;}
+.hs-lbl{font-size:11px;color:var(--text-3);margin-top:5px;}
+.hist-table-card{background:var(--navy-3);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.hist-tbl-head{padding:14px 20px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15);display:flex;align-items:center;justify-content:space-between;}
+.hist-tbl-title{font-size:13px;font-weight:700;color:var(--text);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:11px 20px;color:var(--text-3);font-size:10px;font-weight:700;letter-spacing:.9px;font-family:var(--font-m);border-bottom:1px solid var(--border);background:rgba(0,0,0,.12);}
+td{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text-2);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.025);}
+.td-name{color:var(--text);font-weight:600;font-size:13px;}
+.td-mono{font-family:var(--font-m);font-size:12px;}
+.type-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;font-family:var(--font-m);}
+.type-mcq{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.2);color:#F43F5E;}
+.type-coding{background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.2);color:#2DD4BF;}
+.score-bar-wrap{display:flex;align-items:center;gap:8px;}
+.score-bar-bg{width:70px;height:5px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;}
+.score-bar-fill{height:100%;border-radius:4px;}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;}
+.view-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;background:rgba(244,63,94,.09);border:1px solid rgba(244,63,94,.2);color:#F43F5E;font-size:11px;font-weight:700;text-decoration:none;transition:all .18s;}
+.view-btn:hover{background:rgba(244,63,94,.18);}
+.report-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;background:rgba(45,212,191,.09);border:1px solid rgba(45,212,191,.2);color:#2DD4BF;font-size:11px;font-weight:700;text-decoration:none;transition:all .18s;margin-left:6px;}
+.report-btn:hover{background:rgba(45,212,191,.18);}
+.empty-wrap{padding:70px 24px;text-align:center;}
+.empty-icon-big{font-size:52px;opacity:.25;display:block;margin-bottom:14px;}
+.empty-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.empty-sub{font-size:13px;color:var(--text-3);}
+.btn-start{display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:10px 24px;border-radius:10px;background:linear-gradient(135deg,#F43F5E,#2DD4BF);color:#fff;font-size:13px;font-weight:700;text-decoration:none;}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="history-card">
-  <div class="history-head">
-    <div class="history-title"><span>📊</span> Session History</div>
+{% set completed = sessions | selectattr('status','eq','completed') | list %}
+{% set avg_risk = (sessions | map(attribute='final_risk_score') | select | list | sum / sessions|length) if sessions else 0 %}
+{% set total_viols = sessions | map(attribute='total_violations') | select | list | sum %}
+
+<div class="hist-wrap">
+  <div class="hist-head">
+    <div class="hist-title"><span>📜</span> Exam History</div>
+    <span style="font-size:12px;color:var(--text-3);font-family:var(--font-m)">{{ sessions|length }} sessions</span>
   </div>
+
   {% if sessions %}
-  <table>
-    <thead>
-      <tr>
-        <th>Exam</th>
-        <th>Date</th>
-        <th>Risk Score</th>
-        <th>Status</th>
-        <th>Result</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for s in sessions %}
-      <tr>
-        <td class="td-name">{{ s.exam_name }}</td>
-        <td class="td-mono">{{ s.start_time.strftime('%b %d, %I:%M %p') }}</td>
-        <td>
-          {% set r = s.final_risk_score|default(0) %}
-          {% set c = 'var(--emerald)' if r < 30 else ('var(--amber)' if r < 70 else 'var(--rose)') %}
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="td-mono" style="color:{{c}};font-weight:700">{{ "%.1f"|format(r) }}</span>
-            <div style="width:60px;height:4px;background:var(--glass-b);border-radius:4px;overflow:hidden">
-              <div style="height:100%;width:{{r}}%;background:{{c}}"></div>
+  <!-- Summary cards -->
+  <div class="hist-summary">
+    <div class="hs-card c1">
+      <div class="hs-val" style="color:#F43F5E">{{ sessions|length }}</div>
+      <div class="hs-lbl">Total Sessions</div>
+    </div>
+    <div class="hs-card c2">
+      <div class="hs-val" style="color:#2DD4BF">{{ completed|length }}</div>
+      <div class="hs-lbl">Completed</div>
+    </div>
+    <div class="hs-card c3">
+      {% set ar = "%.1f"|format(avg_risk) %}
+      <div class="hs-val" style="color:{% if avg_risk < 30 %}#22C55E{% elif avg_risk < 60 %}#EAB308{% else %}#F87171{% endif %}">{{ ar }}</div>
+      <div class="hs-lbl">Avg Risk Score</div>
+    </div>
+    <div class="hs-card c4">
+      <div class="hs-val" style="color:#F87171">{{ total_viols }}</div>
+      <div class="hs-lbl">Total Violations</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="hist-table-card">
+    <div class="hist-tbl-head">
+      <div class="hist-tbl-title">All Sessions</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Exam</th><th>Type</th><th>Date</th>
+          <th>Score</th><th>Risk</th><th>Violations</th><th>Status</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sessions %}
+        {% set r = s.final_risk_score|default(0) %}
+        {% set rc = '#22C55E' if r < 30 else ('#EAB308' if r < 60 else '#F87171') %}
+        {% set score_pct = ((s.score / s.total_questions * 100)|round|int) if s.total_questions else 0 %}
+        {% set sc = '#22C55E' if score_pct >= 70 else ('#EAB308' if score_pct >= 40 else '#F87171') %}
+        <tr>
+          <td class="td-mono" style="color:var(--text-3)">{{ loop.index }}</td>
+          <td class="td-name">{{ s.exam_name }}</td>
+          <td>
+            {% if s.exam_type == 'coding' %}
+              <span class="type-badge type-coding">💻 Coding</span>
+            {% else %}
+              <span class="type-badge type-mcq">📝 MCQ</span>
+            {% endif %}
+          </td>
+          <td class="td-mono" style="color:var(--text-3)">{{ s.start_time.strftime('%b %d, %Y %H:%M') }}</td>
+          <td>
+            {% if s.total_questions %}
+            <div class="score-bar-wrap">
+              <span class="td-mono" style="color:{{ sc }};font-weight:700;min-width:36px">{{ score_pct }}%</span>
+              <div class="score-bar-bg"><div class="score-bar-fill" style="width:{{ score_pct }}%;background:{{ sc }}"></div></div>
             </div>
-          </div>
-        </td>
-        <td>
-          {% if s.status == 'completed' %}
-            <span class="badge badge-green">Completed</span>
-          {% elif s.status == 'terminated' %}
-            <span class="badge badge-red">Terminated</span>
-          {% else %}
-            <span class="badge badge-amber">Active</span>
-          {% endif %}
-        </td>
-        <td>
-          <a href="/exam/{{ s.id }}/result" class="report-btn">View Result →</a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+            {% else %}
+              <span style="color:var(--text-3);font-size:11px">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="td-mono" style="color:{{ rc }};font-weight:700">{{ "%.1f"|format(r) }}</span>
+          </td>
+          <td>
+            <span class="td-mono" style="color:{% if s.total_violations %}#F87171{% else %}#22C55E{% endif %}">
+              {{ s.total_violations or 0 }}
+            </span>
+          </td>
+          <td>
+            {% if s.status == 'completed' %}
+              <span class="status-dot" style="background:#22C55E"></span><span style="font-size:12px;color:#22C55E">Completed</span>
+            {% elif s.status == 'terminated' %}
+              <span class="status-dot" style="background:#F87171"></span><span style="font-size:12px;color:#F87171">Terminated</span>
+            {% else %}
+              <span class="status-dot" style="background:#F59E0B"></span><span style="font-size:12px;color:#F59E0B">Active</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="/exam/{{ s.id }}/result" class="view-btn">View →</a>
+            <a href="/report/{{ s.id }}" class="report-btn">PDF</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
   {% else %}
-  <div class="empty-state" style="padding:60px; text-align:center;">
-    <div class="empty-icon" style="font-size:48px; opacity:0.3; margin-bottom:16px;">📭</div>
-    <div class="empty-title" style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px;">No Exams Taken Yet</div>
-    <div class="empty-sub" style="color:var(--text-3);">Your completed exams and risk reports will appear here.</div>
+  <div class="hist-table-card">
+    <div class="empty-wrap">
+      <span class="empty-icon-big">📭</span>
+      <div class="empty-title">No Exams Taken Yet</div>
+      <div class="empty-sub">Your completed exams and proctoring reports will appear here.</div>
+      <a href="/exams" class="btn-start">Browse Exams →</a>
+    </div>
   </div>
   {% endif %}
 </div>

@@ -1,7 +1,8 @@
 /* ── EXAM.JS — ProctorX live exam controller ────────────── */
 'use strict';
 
-const TOTAL_TIME     = 45 * 60;
+/* EXAM_MINUTES is injected by the template; fall back to 45 */
+const TOTAL_TIME     = (typeof EXAM_MINUTES !== 'undefined' ? EXAM_MINUTES : 45) * 60;
 const FRAME_INTERVAL = 1000;
 
 let timeLeft      = TOTAL_TIME;
@@ -473,18 +474,6 @@ function _trackFocusLoss(type, details) {
   }
 }
 
-/* ── Multiple monitor detection (run once on load) ── */
-document.addEventListener('DOMContentLoaded', function() {
-  if (window.screen && window.screen.availWidth > window.screen.width * 1.05) {
-    sendBrowserViolation('multiple_monitor_suspected',
-      'Multiple monitors suspected — screen: ' + window.screen.width +
-      'px, availWidth: ' + window.screen.availWidth + 'px');
-    addViol('medium', '🖥️',
-      'Multiple monitors suspected (' + window.screen.availWidth + 'px available)');
-  }
-  /* Auto-enter fullscreen when exam loads */
-  enterFullscreen();
-});
 
 /* ════════════════════════════════════════
    SUBMIT
@@ -525,5 +514,16 @@ socket.on('session_terminated', function(d) {
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.q-card').forEach(function(c) { qCardIds.push(c.id); });
   setupScrollObserver();
-  startCam();
+  /* Multiple monitor check */
+  if (window.screen && window.screen.availWidth > window.screen.width * 1.05) {
+    sendBrowserViolation('multiple_monitor_suspected',
+      'availWidth=' + window.screen.availWidth + ' screenWidth=' + window.screen.width);
+  }
+  /* startCam() is called by the preflight modal button (startExamNow).
+     On pages without a preflight (e.g. coding_exam.html), startCam() is
+     called directly from the template's DOMContentLoaded. */
+  if (typeof window.__preflight === 'undefined') {
+    /* no preflight — start immediately (coding exam path) */
+    startCam();
+  }
 });

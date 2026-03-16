@@ -480,14 +480,83 @@ kbd{background:var(--bg3);border:1px solid var(--bdr2);border-radius:3px;padding
   <div class="fs-sub">You exited fullscreen mode. This has been recorded as a violation. Click below to return to the exam.</div>
   <button class="fs-btn" onclick="reEnterFs()">↩ Return to Fullscreen</button>
 </div>
+<!-- PRE-FLIGHT MODAL -->
+<div id="preflight-overlay" style="
+  position:fixed;inset:0;z-index:99998;
+  background:rgba(12,10,13,.97);backdrop-filter:blur(24px);
+  display:flex;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:1px solid var(--bdr2);border-radius:24px;
+    padding:36px 40px;max-width:520px;width:90%;text-align:center;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#F43F5E,#2DD4BF)"></div>
+    <div style="font-size:52px;margin-bottom:14px">🎓</div>
+    <div style="font-size:22px;font-weight:800;color:var(--t1);margin-bottom:4px">{{ session.exam_name }}</div>
+    <div style="font-size:13px;color:var(--t3);margin-bottom:24px">Proctored Assessment · {{ questions|length }} Questions · {{ duration }} min</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
+      <div style="background:var(--glass);border:1px solid var(--bdr);border-radius:12px;padding:14px">
+        <div style="font-size:22px;font-weight:800;color:#F43F5E;font-family:var(--fm)">{{ questions|length }}</div>
+        <div style="font-size:10px;color:var(--t4);margin-top:4px">QUESTIONS</div>
+      </div>
+      <div style="background:var(--glass);border:1px solid var(--bdr);border-radius:12px;padding:14px">
+        <div style="font-size:22px;font-weight:800;color:#2DD4BF;font-family:var(--fm)">{{ duration }}m</div>
+        <div style="font-size:10px;color:var(--t4);margin-top:4px">DURATION</div>
+      </div>
+      <div style="background:var(--glass);border:1px solid var(--bdr);border-radius:12px;padding:14px">
+        <div style="font-size:22px;font-weight:800;color:#EAB308;font-family:var(--fm)">{{ difficulty }}</div>
+        <div style="font-size:10px;color:var(--t4);margin-top:4px">DIFFICULTY</div>
+      </div>
+    </div>
+
+    <div style="background:rgba(244,63,94,.07);border:1px solid rgba(244,63,94,.18);border-radius:12px;padding:14px 16px;text-align:left;margin-bottom:24px">
+      <div style="font-size:11px;font-weight:700;color:#F43F5E;margin-bottom:10px;letter-spacing:.5px">EXAM RULES</div>
+      <div style="font-size:12px;color:var(--t3);line-height:1.9">
+        ⛶ Exam runs in fullscreen — exiting is logged as a violation<br>
+        📋 Copy/paste is disabled and monitored<br>
+        📷 Webcam is required — face must remain visible<br>
+        🔇 No talking or background noise allowed<br>
+        📱 No phones, books, or additional screens permitted<br>
+        ⏱ Timer auto-submits when time runs out
+      </div>
+    </div>
+
+    <button onclick="startExamNow()" style="
+      width:100%;padding:14px;background:linear-gradient(135deg,#F43F5E,#2DD4BF);
+      color:#fff;font-size:15px;font-weight:800;border:none;border-radius:12px;
+      cursor:pointer;font-family:var(--f);box-shadow:0 6px 24px rgba(244,63,94,.4);
+      transition:transform .15s,opacity .15s">
+      ⛶ Enter Fullscreen &amp; Start Exam
+    </button>
+    <div style="font-size:11px;color:var(--t4);margin-top:10px">
+      Camera &amp; fullscreen permissions will be requested
+    </div>
+  </div>
+</div>
+
+<div id="fs-overlay">
+  <div class="fs-icon">⛶</div>
+  <div class="fs-title">Fullscreen Required</div>
+  <div class="fs-sub">You exited fullscreen mode. This has been recorded as a violation. Click below to return to the exam.</div>
+  <button class="fs-btn" onclick="reEnterFs()">↩ Return to Fullscreen</button>
+</div>
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
 <script>
-  const SESSION_ID = {{ session.id }};
-  const TOTAL_Q    = {{ questions|length }};
+  const SESSION_ID   = {{ session.id }};
+  const TOTAL_Q      = {{ questions|length }};
+  const EXAM_MINUTES = {{ duration }};
+  window.__preflight = true;  // suppress auto-startCam in exam.js
 </script>
 <script src="/static/js/utils.js"></script>
 <script src="/static/js/exam.js"></script>
+<script>
+function startExamNow() {
+  document.getElementById('preflight-overlay').style.display = 'none';
+  enterFullscreen();
+  startCam();
+}
+// Override DOMContentLoaded in exam.js — don't auto-start cam, show preflight first
+// (exam.js calls startCam() inside DOMContentLoaded, but we intercept via preflight)
+</script>
 </body>
 </html>
