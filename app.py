@@ -52,12 +52,27 @@ login_manager.login_view = 'login'
 
 proctoring_sessions = {}
 
-# Run DB init when started by gunicorn (Render/Railway) — not just __main__
-with app.app_context():
-    try:
+# DB init runs at import time (gunicorn, Koyeb, Render — not just __main__)
+def _init_db():
+    with app.app_context():
         db.create_all()
-    except Exception:
-        pass
+        # Add any missing columns to existing SQLite databases
+        try:
+            with db.engine.connect() as conn:
+                for col, typedef in [
+                    ('score',           'INTEGER DEFAULT 0'),
+                    ('total_questions', 'INTEGER DEFAULT 0'),
+                    ('exam_type',       "VARCHAR(20) DEFAULT 'mcq'"),
+                ]:
+                    try:
+                        conn.execute(db.text(f'ALTER TABLE exam_sessions ADD COLUMN {col} {typedef}'))
+                        conn.commit()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+_init_db()
 
 @login_manager.user_loader
 def load_user(user_id):
