@@ -291,7 +291,7 @@ function fillCreds(user, pass) {
   const form = document.getElementById('loginForm');
   form.querySelector('[name="username"]').value = user;
   form.querySelector('[name="password"]').value = pass;
-  form.querySelector('[name="username"]').focus();
+  form.submit();
 }
 
 function selectRole(role) {

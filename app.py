@@ -75,6 +75,16 @@ def _init_db():
         except Exception:
             pass
 
+        # Seed demo users so guest login always works on Vercel
+        try:
+            if not User.query.filter_by(username='admin').first():
+                db.session.add(User(username='admin', email='admin@example.com', password=generate_password_hash('admin123'), role='admin'))
+            if not User.query.filter_by(username='student1').first():
+                db.session.add(User(username='student1', email='student1@example.com', password=generate_password_hash('student123'), role='student'))
+            db.session.commit()
+        except Exception:
+            pass
+
 _init_db()
 
 @login_manager.user_loader
