@@ -42,8 +42,11 @@ except Exception as _ai_err:
 # â”€â”€ App Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app = Flask(__name__)
 app.config.from_object(Config)
-os.makedirs('static/screenshots', exist_ok=True)
-os.makedirs('database', exist_ok=True)
+try:
+    os.makedirs('static/screenshots', exist_ok=True)
+    os.makedirs('database', exist_ok=True)
+except Exception:
+    pass
 
 db.init_app(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
