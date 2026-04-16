@@ -84,6 +84,13 @@ def _init_db():
             db.session.commit()
         except Exception:
             pass
+            
+        # Seed questions for Vercel ephemeral DB
+        try:
+            from seed_subjects import seed_all_questions
+            seed_all_questions(app, db)
+        except Exception as e:
+            print(f"Question seed issue: {e}")
 
 _init_db()
 

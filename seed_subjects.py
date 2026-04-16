@@ -4,8 +4,6 @@
 
 import sys
 sys.path.insert(0, '.')
-from app import app, db
-from models import Question
 
 questions = [
   # ── DSA ──────────────────────────────────────────────────────
@@ -128,19 +126,23 @@ questions = [
   ("Computer Architecture","What is Little Endian?","Smallest CPU","Least significant byte stored at lowest address","Most significant byte stored at lowest address","A networking protocol","B"),
   ("Computer Architecture","What defines Moore's Law?","Transistor count doubles roughly every two years","CPU speed doubles every year","Memory size doubles every 18 months","Power consumption halves every year","A")
 ]
-with app.app_context():
-  added = 0
-  for q in questions:
-    exam, qtext, a, b, c, d, ans = q
-    exists = Question.query.filter_by(exam_name=exam, question_text=qtext).first()
-    if not exists:
-      db.session.add(Question(
-        exam_name=exam, question_text=qtext,
-        option_a=a, option_b=b, option_c=c, option_d=d,
-        correct_answer=ans
-      ))
-      added += 1
-  db.session.commit()
-  print(f"[SUCCESS] Added {added} questions across 10 CS subjects!")
-  total = Question.query.count()
-  print(f"[INFO] Total questions in database: {total}")
+def seed_all_questions(app_instance, db_instance):
+  from models import Question
+  with app_instance.app_context():
+    added = 0
+    for q in questions:
+      exam, qtext, a, b, c, d, ans = q
+      exists = Question.query.filter_by(exam_name=exam, question_text=qtext).first()
+      if not exists:
+        db_instance.session.add(Question(
+          exam_name=exam, question_text=qtext,
+          option_a=a, option_b=b, option_c=c, option_d=d,
+          correct_answer=ans
+        ))
+        added += 1
+    db_instance.session.commit()
+    print(f"[SUCCESS] Added {added} questions across 10 CS subjects!")
+
+if __name__ == '__main__':
+  from app import app, db
+  seed_all_questions(app, db)
